@@ -1,0 +1,140 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | CloudCount</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body>
+  <main class="dashboard">
+    <header class="dashboard-topbar">
+      <div class="brand-logo">
+        <span class="logo-mark">☁️</span>
+        <span>CloudCount</span>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip">
+          <div class="avatar" id="avatar"></div>
+          <div class="user-meta">
+            <strong id="user-name"></strong>
+            <span class="role-badge" id="user-role"></span>
+          </div>
+        </div>
+        <button class="btn btn-logout" id="logout-btn">Sign out</button>
+      </div>
+    </header>
+
+    <div class="dashboard-body">
+      <div class="dashboard-welcome">
+        <h1 id="welcome-title">Welcome back</h1>
+        <p id="welcome-sub"></p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Active instances</div>
+          <div class="stat-value" id="stat-instances">0</div>
+          <div class="stat-delta">▲ 12 this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Storage used</div>
+          <div class="stat-value" id="stat-storage">0 TB</div>
+          <div class="stat-delta">▲ 8% this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Monthly spend</div>
+          <div class="stat-value" id="stat-spend">$0</div>
+          <div class="stat-delta" id="stat-spend-delta">▼ 4% this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Service health</div>
+          <div class="stat-value" id="stat-health">99.9%</div>
+          <div class="stat-delta">All systems operational</div>
+        </div>
+      </div>
+
+      <section class="role-panel">
+        <h3>Your access level: <span class="role-badge" id="panel-role"></span></h3>
+        <p id="panel-description"></p>
+        <div class="role-permissions" id="panel-permissions"></div>
+      </section>
+
+      <section class="role-panel mt-4" id="users-panel" hidden>
+        <h3>Team members</h3>
+        <div class="role-permissions">
+          <span class="perm-tag">This panel is only visible to administrators.</span>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script>
+    const user = Auth.currentUser();
+
+    if (!user) {
+      window.location.href = "login.html";
+    } else {
+      const role = user.role;
+      const roleMeta = Auth.ROLES[role];
+
+      getField("user-name").textContent = user.name;
+      getField("avatar").textContent = user.name.trim().charAt(0).toUpperCase();
+      getField("user-role").textContent = role;
+      getField("user-role").classList.add(role);
+
+      getField("welcome-title").textContent = "Welcome back, " + user.name.split(" ")[0] + "!";
+      getField("welcome-sub").textContent =
+        "Here's a summary of your cloud environment as of " +
+        new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }) +
+        ".";
+
+      const stats = {
+        instances: { admin: 342, client: 12, developer: 58, analyst: 342 }[role] || 12,
+        storage: { admin: "48.2 TB", client: "3.1 TB", developer: "12.6 TB", analyst: "48.2 TB" }[role],
+        spend: { admin: "$12,480", client: "$1,240", developer: "$4,860", analyst: "$12,480" }[role],
+      };
+
+      getField("stat-instances").textContent = stats.instances;
+      getField("stat-storage").textContent = stats.storage;
+      getField("stat-spend").textContent = stats.spend;
+
+      getField("panel-role").textContent = role;
+      getField("panel-role").classList.add(role);
+      getField("panel-description").textContent =
+        roleMeta.label + " role with the following permissions on the CloudCount dashboard.";
+
+      const perms = getField("panel-permissions");
+      roleMeta.permissions.forEach((p) => {
+        const tag = document.createElement("span");
+        tag.className = "perm-tag";
+        tag.textContent = p;
+        perms.appendChild(tag);
+      });
+
+      if (role === "admin") {
+        getField("users-panel").hidden = false;
+        const users = Auth.getUsers();
+        const list = getField("users-panel").querySelector(".role-permissions");
+        list.innerHTML = "";
+        users.forEach((u) => {
+          const tag = document.createElement("span");
+          tag.className = "perm-tag";
+          tag.textContent = u.name + " (" + u.email + ") - " + u.role;
+          list.appendChild(tag);
+        });
+      }
+    }
+
+    getField("logout-btn").addEventListener("click", () => {
+      Auth.logout();
+      window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>

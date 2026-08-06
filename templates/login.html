@@ -1,0 +1,152 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In | CloudCount Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body>
+  <main class="auth-page">
+    <div class="auth-layout">
+      <aside class="auth-brand show">
+        <div class="brand-logo">
+          <span class="logo-mark">☁️</span>
+          <span>CloudCount</span>
+        </div>
+        <div class="brand-copy">
+          <h2>Monitor your cloud infrastructure in real time.</h2>
+          <p>
+            Track instances, storage, bandwidth and costs across all your cloud
+            providers from a single secure dashboard.
+          </p>
+        </div>
+        <div class="brand-stats">
+          <div class="stat"><strong>12.4K</strong><span>Instances</span></div>
+          <div class="stat"><strong>99.9%</strong><span>Uptime</span></div>
+          <div class="stat"><strong>8</strong><span>Regions</span></div>
+        </div>
+      </aside>
+
+      <section class="auth-card">
+        <div class="mobile-logo">
+          <span class="logo-mark">☁️</span>
+          <span>CloudCount</span>
+        </div>
+
+        <div class="auth-heading">
+          <h1>Welcome back</h1>
+          <p>Sign in to access your cloud dashboard.</p>
+        </div>
+
+        <div id="login-alert" class="alert alert-error" role="alert"></div>
+
+        <form id="login-form" novalidate>
+          <div class="form-group">
+            <label for="email">Email address</label>
+            <div class="input-wrap">
+              <span class="field-icon">✉️</span>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="you@company.com"
+                autocomplete="email"
+              />
+            </div>
+            <p class="field-error" data-error-for="email"></p>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <span class="field-icon">🔒</span>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+              />
+              <button type="button" class="toggle-password" data-toggle-password="password" aria-label="Toggle password visibility">👁</button>
+            </div>
+            <p class="field-error" data-error-for="password"></p>
+          </div>
+
+          <div class="form-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="remember" />
+              <span>Remember me</span>
+            </label>
+            <a class="link" href="forgot-password.html">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="btn">Sign in</button>
+        </form>
+
+        <p class="form-footer">
+          Don't have an account? <a class="link" href="register.html">Create one</a>
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script>
+    if (Auth.getSession()) {
+      window.location.href = "dashboard.html";
+    }
+
+    attachPasswordToggles(document);
+
+    document.getElementById("login-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const emailInput = getField("email");
+      const passwordInput = getField("password");
+      let valid = true;
+
+      clearError(emailInput);
+      clearError(passwordInput);
+
+      if (!emailInput.value.trim()) {
+        showError(emailInput, "Email is required.");
+        valid = false;
+      } else if (!validateEmail(emailInput.value.trim())) {
+        showError(emailInput, "Enter a valid email address.");
+        valid = false;
+      }
+
+      if (!passwordInput.value) {
+        showError(passwordInput, "Password is required.");
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      const result = Auth.login({
+        email: emailInput.value.trim().toLowerCase(),
+        password: passwordInput.value,
+        remember: getField("remember").checked,
+      });
+
+      if (result.ok) {
+        showAlert("login-alert", "Signed in successfully. Redirecting...", "success");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 700);
+      } else {
+        showAlert("login-alert", result.message, "error");
+      }
+    });
+
+    ["email", "password"].forEach((id) => {
+      getField(id).addEventListener("input", () => clearError(getField(id)));
+    });
+  </script>
+</body>
+</html>

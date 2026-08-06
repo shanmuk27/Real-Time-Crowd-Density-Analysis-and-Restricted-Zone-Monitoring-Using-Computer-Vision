@@ -1,0 +1,256 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Account | CloudCount Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body>
+  <main class="auth-page">
+    <div class="auth-layout">
+      <aside class="auth-brand show">
+        <div class="brand-logo">
+          <span class="logo-mark">☁️</span>
+          <span>CloudCount</span>
+        </div>
+        <div class="brand-copy">
+          <h2>Role-based access for every team member.</h2>
+          <p>
+            Choose a role that fits how your team works. Admins manage everything,
+            clients monitor their resources, developers ship code and analysts
+            focus on reporting.
+          </p>
+        </div>
+        <div class="brand-stats">
+          <div class="stat"><strong>4</strong><span>Roles</span></div>
+          <div class="stat"><strong>256-bit</strong><span>Encryption</span></div>
+          <div class="stat"><strong>24/7</strong><span>Support</span></div>
+        </div>
+      </aside>
+
+      <section class="auth-card">
+        <div class="mobile-logo">
+          <span class="logo-mark">☁️</span>
+          <span>CloudCount</span>
+        </div>
+
+        <div class="auth-heading">
+          <h1>Create your account</h1>
+          <p>Join CloudCount in under a minute.</p>
+        </div>
+
+        <div id="register-alert" class="alert alert-error" role="alert"></div>
+
+        <form id="register-form" novalidate>
+          <div class="form-group">
+            <label for="name">Full name</label>
+            <div class="input-wrap">
+              <span class="field-icon">👤</span>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                placeholder="John Doe"
+                autocomplete="name"
+              />
+            </div>
+            <p class="field-error" data-error-for="name"></p>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email address</label>
+            <div class="input-wrap">
+              <span class="field-icon">✉️</span>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="you@company.com"
+                autocomplete="email"
+              />
+            </div>
+            <p class="field-error" data-error-for="email"></p>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <span class="field-icon">🔒</span>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="At least 8 characters"
+                autocomplete="new-password"
+              />
+              <button type="button" class="toggle-password" data-toggle-password="password" aria-label="Toggle password visibility">👁</button>
+            </div>
+            <p class="field-error" data-error-for="password"></p>
+          </div>
+
+          <div class="form-group">
+            <label for="confirm-password">Confirm password</label>
+            <div class="input-wrap">
+              <span class="field-icon">🔐</span>
+              <input
+                type="password"
+                id="confirm-password"
+                name="confirm-password"
+                placeholder="Re-enter your password"
+                autocomplete="new-password"
+              />
+              <button type="button" class="toggle-password" data-toggle-password="confirm-password" aria-label="Toggle password visibility">👁</button>
+            </div>
+            <p class="field-error" data-error-for="confirm-password"></p>
+          </div>
+
+          <div class="form-group">
+            <label>Select your role</label>
+            <div class="role-picker" id="role-picker">
+              <label class="role-option">
+                <input type="radio" name="role" value="admin" />
+                <span class="role-card">
+                  <span class="role-emoji">🛡️</span>
+                  <strong>Admin</strong>
+                  <small>Full control</small>
+                </span>
+              </label>
+              <label class="role-option">
+                <input type="radio" name="role" value="client" />
+                <span class="role-card">
+                  <span class="role-emoji">🏢</span>
+                  <strong>Client</strong>
+                  <small>Manage resources</small>
+                </span>
+              </label>
+              <label class="role-option">
+                <input type="radio" name="role" value="developer" />
+                <span class="role-card">
+                  <span class="role-emoji">💻</span>
+                  <strong>Developer</strong>
+                  <small>API & deploys</small>
+                </span>
+              </label>
+              <label class="role-option">
+                <input type="radio" name="role" value="analyst" />
+                <span class="role-card">
+                  <span class="role-emoji">📊</span>
+                  <strong>Analyst</strong>
+                  <small>Reports & views</small>
+                </span>
+              </label>
+            </div>
+            <p class="field-error" data-error-for="role"></p>
+          </div>
+
+          <button type="submit" class="btn">Create account</button>
+        </form>
+
+        <p class="form-footer">
+          Already have an account? <a class="link" href="login.html">Sign in</a>
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script>
+    if (Auth.getSession()) {
+      window.location.href = "dashboard.html";
+    }
+
+    attachPasswordToggles(document);
+
+    function selectedRole() {
+      const checked = document.querySelector('input[name="role"]:checked');
+      return checked ? checked.value : null;
+    }
+
+    document.getElementById("register-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const nameInput = getField("name");
+      const emailInput = getField("email");
+      const passwordInput = getField("password");
+      const confirmInput = getField("confirm-password");
+      let valid = true;
+
+      [nameInput, emailInput, passwordInput, confirmInput].forEach(clearError);
+
+      if (!nameInput.value.trim()) {
+        showError(nameInput, "Full name is required.");
+        valid = false;
+      } else if (nameInput.value.trim().length < 2) {
+        showError(nameInput, "Name must be at least 2 characters.");
+        valid = false;
+      }
+
+      if (!emailInput.value.trim()) {
+        showError(emailInput, "Email is required.");
+        valid = false;
+      } else if (!validateEmail(emailInput.value.trim())) {
+        showError(emailInput, "Enter a valid email address.");
+        valid = false;
+      }
+
+      if (!passwordInput.value) {
+        showError(passwordInput, "Password is required.");
+        valid = false;
+      } else if (!validatePassword(passwordInput.value)) {
+        showError(passwordInput, "Password must be at least 8 characters.");
+        valid = false;
+      }
+
+      if (!confirmInput.value) {
+        showError(confirmInput, "Please confirm your password.");
+        valid = false;
+      } else if (confirmInput.value !== passwordInput.value) {
+        showError(confirmInput, "Passwords do not match.");
+        valid = false;
+      }
+
+      const role = selectedRole();
+      if (!role) {
+        showError(document.querySelector('.role-picker input[name="role"]'), "Please select a role.");
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      const result = Auth.register({
+        name: nameInput.value,
+        email: emailInput.value.trim().toLowerCase(),
+        password: passwordInput.value,
+        role: role,
+      });
+
+      if (result.ok) {
+        showAlert("register-alert", "Account created successfully. Redirecting to your dashboard...", "success");
+        Auth.login({
+          email: result.user.email,
+          password: passwordInput.value,
+          remember: true,
+        });
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 1000);
+      } else {
+        showAlert("register-alert", result.message, "error");
+      }
+    });
+
+    ["name", "email", "password", "confirm-password"].forEach((id) => {
+      getField(id).addEventListener("input", () => clearError(getField(id)));
+    });
+
+    document.querySelectorAll('input[name="role"]').forEach((radio) => {
+      radio.addEventListener("change", () => clearError(radio));
+    });
+  </script>
+</body>
+</html>
