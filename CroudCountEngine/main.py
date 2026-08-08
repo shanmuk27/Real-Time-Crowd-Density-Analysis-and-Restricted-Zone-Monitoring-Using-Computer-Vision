@@ -8,7 +8,7 @@ from ultralytics import YOLO
 
 
 DEFAULT_VIDEO_PATH = Path(
-    r"C:\infosys_crowdcount_october2025_Shanmuk\uploads\6387-191695740.mp4"
+    r"C:\infosys_crowdcount_october2025_Shanmuk\uploads\istockphoto-1471311788-640_adpp_is.mp4"
 )
 TRAINED_WEIGHTS_PATH = Path(__file__).resolve().parents[1] / "runs" / "crowd_train" / "weights" / "best.pt"
 
@@ -25,6 +25,10 @@ class VideoFeed:
         tile_size: int,
         tile_overlap: float,
         smooth: int,
+        min_box_area: float,
+        max_box_area: float,
+        min_box_height: float,
+        process_every: int,
     ):
         self.video_path = video_path
         self.cap = cv2.VideoCapture(video_path)
@@ -36,16 +40,28 @@ class VideoFeed:
         self.tile_size = tile_size
         self.tile_overlap = tile_overlap
         self.count_history = deque(maxlen=max(1, smooth))
+        self.min_box_area = min_box_area
+        self.max_box_area = max_box_area
+        self.min_box_height = min_box_height
+        self.process_every = max(1, process_every)
+        self.frame_index = 0
+        self.last_annotated_frame = None
+        self.last_count = 0
         print(f"[model] Loaded weights: {model_path}")
         print(
             f"[mode] {'Tiled accuracy mode' if tiled else 'Single-frame speed mode'} "
-            f"conf={conf}, iou={iou}, imgsz={imgsz}"
+            f"conf={conf}, iou={iou}, imgsz={imgsz}, process_every={self.process_every}"
         )
 
     def get_frame(self):
         ret, frame = self.cap.read()
         if not ret:
             return None, 0
+
+        self.frame_index += 1
+        if self.process_every > 1 and self.frame_index % self.process_every != 1:
+            if self.last_annotated_frame is not None:
+                return self.last_annotated_frame.copy(), self.last_count
 
         if self.tiled:
             boxes, scores = self.detect_tiled(frame)
@@ -55,13 +71,46 @@ class VideoFeed:
         else:
             results = self.model(frame, conf=self.conf, iou=self.iou, imgsz=self.imgsz, verbose=False)
             result = results[0]
-            crowd_count = 0 if result.boxes is None else len(result.boxes)
-            annotated_frame = result.plot()
+            boxes, scores = self.extract_boxes(result)
+            crowd_count = len(boxes)
+            annotated_frame = frame.copy()
+            self.draw_boxes(annotated_frame, boxes, scores)
 
         self.count_history.append(crowd_count)
         smoothed_count = round(sum(self.count_history) / len(self.count_history))
         self.draw_count_overlay(annotated_frame, crowd_count, smoothed_count)
+        self.last_annotated_frame = annotated_frame.copy()
+        self.last_count = crowd_count
         return annotated_frame, crowd_count
+
+    def extract_boxes(self, result, x_offset: float = 0.0, y_offset: float = 0.0):
+        if result.boxes is None or len(result.boxes) == 0:
+            return [], []
+
+        boxes = []
+        scores = []
+        xyxy = result.boxes.xyxy.cpu().numpy()
+        confs = result.boxes.conf.cpu().numpy()
+        for box, score in zip(xyxy, confs):
+            x1, y1, x2, y2 = box
+            mapped_box = [float(x1 + x_offset), float(y1 + y_offset), float(x2 + x_offset), float(y2 + y_offset)]
+            if self.is_valid_box(mapped_box):
+                boxes.append(mapped_box)
+                scores.append(float(score))
+        return boxes, scores
+
+    def is_valid_box(self, box):
+        x1, y1, x2, y2 = box
+        width = max(0.0, x2 - x1)
+        height = max(0.0, y2 - y1)
+        area = width * height
+        if height < self.min_box_height:
+            return False
+        if self.min_box_area and area < self.min_box_area:
+            return False
+        if self.max_box_area and area > self.max_box_area:
+            return False
+        return True
 
     def detect_tiled(self, frame):
         height, width = frame.shape[:2]
@@ -79,15 +128,9 @@ class VideoFeed:
                 tile = frame[y1:y2, x1:x2]
                 results = self.model(tile, conf=self.conf, iou=self.iou, imgsz=self.imgsz, verbose=False)
                 result = results[0]
-                if result.boxes is None or len(result.boxes) == 0:
-                    continue
-
-                xyxy = result.boxes.xyxy.cpu().numpy()
-                confs = result.boxes.conf.cpu().numpy()
-                for box, score in zip(xyxy, confs):
-                    bx1, by1, bx2, by2 = box
-                    all_boxes.append([float(bx1 + x1), float(by1 + y1), float(bx2 + x1), float(by2 + y1)])
-                    all_scores.append(float(score))
+                boxes, scores = self.extract_boxes(result, x1, y1)
+                all_boxes.extend(boxes)
+                all_scores.extend(scores)
 
         return self.merge_boxes(all_boxes, all_scores)
 
@@ -213,6 +256,30 @@ def parse_args():
         help="Average the displayed count over this many frames.",
     )
     parser.add_argument(
+        "--min-box-area",
+        type=float,
+        default=6.0,
+        help="Ignore boxes smaller than this pixel area. Increase to remove tiny noise.",
+    )
+    parser.add_argument(
+        "--max-box-area",
+        type=float,
+        default=0.0,
+        help="Ignore boxes larger than this pixel area. Use 0 to disable.",
+    )
+    parser.add_argument(
+        "--min-box-height",
+        type=float,
+        default=2.0,
+        help="Ignore boxes shorter than this many pixels.",
+    )
+    parser.add_argument(
+        "--process-every",
+        type=int,
+        default=1,
+        help="Run detection every N frames and reuse the last count between frames.",
+    )
+    parser.add_argument(
         "--print-every",
         type=int,
         default=30,
@@ -233,6 +300,10 @@ if __name__ == "__main__":
         args.tile_size,
         args.tile_overlap,
         args.smooth,
+        args.min_box_area,
+        args.max_box_area,
+        args.min_box_height,
+        args.process_every,
     )
     frame_number = 0
 
