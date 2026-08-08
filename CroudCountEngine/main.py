@@ -167,6 +167,13 @@ def parse_args():
         help="Path to the input video.",
     )
     parser.add_argument(
+        "--source",
+        type=int,
+        choices=[0, 1],
+        default=1,
+        help="Input source switch: 0 = use --video (default video file), 1 = use device camera.",
+    )
+    parser.add_argument(
         "--weights",
         default=str(TRAINED_WEIGHTS_PATH if TRAINED_WEIGHTS_PATH.exists() else "yolov8n.pt"),
         help="Path to YOLO weights. Defaults to trained weights if available.",
@@ -223,8 +230,9 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
+    video_source = 0 if args.source == 1 else args.video
     video_feed = VideoFeed(
-        args.video,
+        video_source,
         args.weights,
         args.conf,
         args.iou,

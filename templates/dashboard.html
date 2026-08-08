@@ -75,11 +75,14 @@
 
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
-    const user = Auth.currentUser();
+    (async () => {
+      const user = await Auth.currentUser();
 
-    if (!user) {
-      window.location.href = "login.html";
-    } else {
+      if (!user) {
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+        return;
+      }
+
       const role = user.role;
       const roleMeta = Auth.ROLES[role];
 
@@ -119,7 +122,7 @@
 
       if (role === "admin") {
         getField("users-panel").hidden = false;
-        const users = Auth.getUsers();
+        const users = await Auth.getUsers();
         const list = getField("users-panel").querySelector(".role-permissions");
         list.innerHTML = "";
         users.forEach((u) => {
@@ -129,12 +132,12 @@
           list.appendChild(tag);
         });
       }
-    }
 
-    getField("logout-btn").addEventListener("click", () => {
-      Auth.logout();
-      window.location.href = "login.html";
-    });
+      getField("logout-btn").addEventListener("click", async () => {
+        await Auth.logout();
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+      });
+    })();
   </script>
 </body>
 </html>
