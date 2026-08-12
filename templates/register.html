@@ -152,7 +152,7 @@
         </form>
 
         <p class="form-footer">
-          Already have an account? <a class="link" href="login.html">Sign in</a>
+          Already have an account? <a class="link" href="{% url 'DatabaseConectivity:login' %}">Sign in</a>
         </p>
       </section>
     </div>
@@ -160,9 +160,11 @@
 
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
-    if (Auth.getSession()) {
-      window.location.href = "dashboard.html";
-    }
+    Auth.currentUser().then((user) => {
+      if (user) {
+        window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
+      }
+    });
 
     attachPasswordToggles(document);
 
@@ -171,7 +173,7 @@
       return checked ? checked.value : null;
     }
 
-    document.getElementById("register-form").addEventListener("submit", (e) => {
+    document.getElementById("register-form").addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const nameInput = getField("name");
@@ -222,7 +224,7 @@
 
       if (!valid) return;
 
-      const result = Auth.register({
+      const result = await Auth.register({
         name: nameInput.value,
         email: emailInput.value.trim().toLowerCase(),
         password: passwordInput.value,
@@ -231,13 +233,8 @@
 
       if (result.ok) {
         showAlert("register-alert", "Account created successfully. Redirecting to your dashboard...", "success");
-        Auth.login({
-          email: result.user.email,
-          password: passwordInput.value,
-          remember: true,
-        });
         setTimeout(() => {
-          window.location.href = "dashboard.html";
+          window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
         }, 1000);
       } else {
         showAlert("register-alert", result.message, "error");

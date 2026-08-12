@@ -82,14 +82,14 @@
               <input type="checkbox" id="remember" />
               <span>Remember me</span>
             </label>
-            <a class="link" href="forgot-password.html">Forgot password?</a>
+            <a class="link" href="{% url 'DatabaseConectivity:forgot-password' %}">Forgot password?</a>
           </div>
 
           <button type="submit" class="btn">Sign in</button>
         </form>
 
         <p class="form-footer">
-          Don't have an account? <a class="link" href="register.html">Create one</a>
+          Don't have an account? <a class="link" href="{% url 'DatabaseConectivity:register' %}">Create one</a>
         </p>
       </section>
     </div>
@@ -97,13 +97,15 @@
 
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
-    if (Auth.getSession()) {
-      window.location.href = "dashboard.html";
-    }
+    Auth.currentUser().then((user) => {
+      if (user) {
+        window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
+      }
+    });
 
     attachPasswordToggles(document);
 
-    document.getElementById("login-form").addEventListener("submit", (e) => {
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const emailInput = getField("email");
@@ -128,7 +130,7 @@
 
       if (!valid) return;
 
-      const result = Auth.login({
+      const result = await Auth.login({
         email: emailInput.value.trim().toLowerCase(),
         password: passwordInput.value,
         remember: getField("remember").checked,
@@ -137,7 +139,7 @@
       if (result.ok) {
         showAlert("login-alert", "Signed in successfully. Redirecting...", "success");
         setTimeout(() => {
-          window.location.href = "dashboard.html";
+          window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
         }, 700);
       } else {
         showAlert("login-alert", result.message, "error");
