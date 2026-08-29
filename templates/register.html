@@ -162,7 +162,7 @@
   <script>
     Auth.currentUser().then((user) => {
       if (user) {
-        window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
+        window.location.href = "{% url 'DatabaseConectivity:app' %}";
       }
     });
 
@@ -234,7 +234,7 @@
       if (result.ok) {
         showAlert("register-alert", "Account created successfully. Redirecting to your dashboard...", "success");
         setTimeout(() => {
-          window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
+          window.location.href = "{% url 'DatabaseConectivity:app' %}";
         }, 1000);
       } else {
         showAlert("register-alert", result.message, "error");

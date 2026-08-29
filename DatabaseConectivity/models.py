@@ -9,3 +9,4 @@ class users(models.Model):
     password = models.CharField(max_length=100)
     role = models.CharField(max_length=50)
     control = models.CharField(max_length=50)
+    photo = models.FileField(upload_to='photos/', blank=True, null=True)

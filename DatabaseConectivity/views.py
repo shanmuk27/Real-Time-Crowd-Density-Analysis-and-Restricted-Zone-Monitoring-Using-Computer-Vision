@@ -1,5 +1,7 @@
 import json
+import os
 
+from django.core.files.storage import default_storage
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -15,14 +17,21 @@ def _json_body(request):
 
 
 def _user_dict(user):
-    return {'id': user.id, 'name': user.name, 'email': user.email, 'role': user.role}
+    return {
+        'id': user.id,
+        'name': user.name,
+        'email': user.email,
+        'role': user.role,
+        'photo': user.photo.url if user.photo else '',
+        'control': user.control,
+    }
 
 
 @ensure_csrf_cookie
 def Home(request):
     user_id = request.session.get('user_id')
     if user_id and users.objects.filter(id=user_id).exists():
-        return redirect('DatabaseConectivity:dashboard')
+        return redirect('DatabaseConectivity:app')
     return redirect('DatabaseConectivity:login')
 
 
@@ -42,6 +51,68 @@ def Login(request):
         request.session['role'] = user.role
         return JsonResponse({'ok': True, 'user': _user_dict(user)})
     return render(request, 'login.html')
+
+
+@ensure_csrf_cookie
+def App(request):
+    user_id = request.session.get('user_id')
+    user = users.objects.filter(id=user_id).first() if user_id else None
+    if not user:
+        return redirect('DatabaseConectivity:login')
+    return render(request, 'app.html', {'user': user})
+
+
+@ensure_csrf_cookie
+def CameraManagement(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return redirect('DatabaseConectivity:login')
+    return render(request, 'camera.html')
+
+
+@ensure_csrf_cookie
+def Profile(request):
+    user_id = request.session.get('user_id')
+    user = users.objects.filter(id=user_id).first() if user_id else None
+    if not user:
+        return redirect('DatabaseConectivity:login')
+    return render(request, 'profile.html', {'user': user})
+
+
+def UploadPhoto(request):
+    user_id = request.session.get('user_id')
+    user = users.objects.filter(id=user_id).first() if user_id else None
+    if not user:
+        return JsonResponse({'ok': False, 'message': 'Not authenticated.'})
+    photo = request.FILES.get('photo')
+    if not photo:
+        return JsonResponse({'ok': False, 'message': 'No photo provided.'})
+    ext = os.path.splitext(photo.name)[1].lower()
+    if ext not in ('.jpg', '.jpeg', '.png', '.gif', '.webp'):
+        return JsonResponse({'ok': False, 'message': 'Unsupported file type. Use JPG, PNG, GIF or WEBP.'})
+    if user.photo:
+        default_storage.delete(user.photo.name)
+    user.photo.save('user_{0}{1}'.format(user.id, ext), photo, save=True)
+    return JsonResponse({'ok': True, 'photo': user.photo.url})
+
+
+def UpdateProfile(request):
+    user_id = request.session.get('user_id')
+    user = users.objects.filter(id=user_id).first() if user_id else None
+    if not user:
+        return JsonResponse({'ok': False, 'message': 'Not authenticated.'})
+    data = _json_body(request)
+    name = (data.get('name') or '').strip()
+    email = (data.get('email') or '').strip().lower()
+    if not name or not email:
+        return JsonResponse({'ok': False, 'message': 'Both fields are required.'})
+    existing = users.objects.filter(email=email).exclude(id=user.id).first()
+    if existing:
+        return JsonResponse({'ok': False, 'message': 'An account with this email already exists.'})
+    user.name = name
+    user.email = email
+    user.save()
+    return JsonResponse({'ok': True, 'user': _user_dict(user)})
 
 
 @ensure_csrf_cookie

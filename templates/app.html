@@ -1,0 +1,135 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CloudCount</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=4" />
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="logo-mark">☁️</span>
+        <span class="brand-text">CloudCount</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-page="dashboard" onclick="navigateTo(this, '{% url 'DatabaseConectivity:dashboard' %}')">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-item" data-page="camera" onclick="navigateTo(this, '{% url 'DatabaseConectivity:camera-management' %}')">
+          <span class="nav-icon">📷</span>
+          <span class="nav-label">Camera Management</span>
+        </a>
+        <a class="nav-item" data-page="profile" onclick="navigateTo(this, '{% url 'DatabaseConectivity:profile' %}')">
+          <span class="nav-icon">👤</span>
+          <span class="nav-label">Profile</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <a class="nav-item" id="sidebar-logout" onclick="handleLogout()">
+          <span class="nav-icon">🚪</span>
+          <span class="nav-label">Sign out</span>
+        </a>
+      </div>
+    </aside>
+
+    <div class="main-area">
+      <header class="dashboard-topbar topbar-nav">
+        <div class="user-chip">
+          <div class="avatar" id="avatar"></div>
+          <div class="user-meta">
+            <strong id="user-name"></strong>
+            <span class="user-id-text" id="user-id"></span>
+            <span class="role-badge" id="user-role"></span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="notif-wrap">
+            <button class="notif-btn" id="notif-btn" onclick="toggleNotifications()" aria-label="Notifications">
+              <span class="notif-icon">🔔</span>
+              <span class="notif-badge" id="notif-badge">3</span>
+            </button>
+            <div class="notif-dropdown" id="notif-dropdown">
+              <div class="notif-header">Notifications</div>
+              <div class="notif-list" id="notif-list"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <iframe id="content-frame" class="content-frame" src="{% url 'DatabaseConectivity:dashboard' %}"></iframe>
+    </div>
+  </div>
+
+  <script src="{% static 'js/demo_data.js' %}"></script>
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script>
+    function navigateTo(el, url) {
+      document.querySelectorAll(".nav-item[data-page]").forEach(function (item) {
+        item.classList.remove("active");
+      });
+      el.classList.add("active");
+      document.getElementById("content-frame").src = url;
+    }
+
+    async function handleLogout() {
+      await Auth.logout();
+      window.location.href = "{% url 'DatabaseConectivity:login' %}";
+    }
+
+    function toggleNotifications() {
+      document.getElementById("notif-dropdown").classList.toggle("show");
+    }
+
+    document.addEventListener("click", function (e) {
+      const wrap = document.querySelector(".notif-wrap");
+      if (wrap && !wrap.contains(e.target)) {
+        document.getElementById("notif-dropdown").classList.remove("show");
+      }
+    });
+
+    function renderNotifications() {
+      const list = document.getElementById("notif-list");
+      list.innerHTML = "";
+      DEMO_NOTIFICATIONS.forEach((n) => {
+        const item = document.createElement("div");
+        item.className = "notif-item" + (n.unread ? " unread" : "");
+        item.innerHTML =
+          '<span class="notif-item-icon">' + n.icon + "</span>" +
+          '<div class="notif-item-body">' +
+          '<span class="notif-item-text">' + n.message + "</span>" +
+          '<span class="notif-item-time">' + n.time + "</span>" +
+          "</div>";
+        list.appendChild(item);
+      });
+    }
+
+    renderNotifications();
+
+    (async () => {
+      const user = await Auth.currentUser();
+
+      if (!user) {
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+        return;
+      }
+
+      const demoUser = DEMO_USER_DATA[user.id];
+
+      document.getElementById("user-name").textContent = user.name;
+      document.getElementById("avatar").textContent = user.name.trim().charAt(0).toUpperCase();
+      document.getElementById("user-id").textContent = demoUser ? demoUser.user_id : user.name;
+      document.getElementById("user-role").textContent = user.role;
+      document.getElementById("user-role").classList.add(user.role);
+    })();
+  </script>
+</body>
+</html>

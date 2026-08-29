@@ -99,7 +99,7 @@
   <script>
     Auth.currentUser().then((user) => {
       if (user) {
-        window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
+        window.location.href = "{% url 'DatabaseConectivity:app' %}";
       }
     });
 
@@ -139,7 +139,7 @@
       if (result.ok) {
         showAlert("login-alert", "Signed in successfully. Redirecting...", "success");
         setTimeout(() => {
-          window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
+          window.location.href = "{% url 'DatabaseConectivity:app' %}";
         }, 700);
       } else {
         showAlert("login-alert", result.message, "error");

@@ -13,4 +13,9 @@ urlpatterns = [
     path('logout/', views.Logout, name='logout'),
     path('me/', views.Me, name='me'),
     path('users/', views.Users, name='users'),
+    path('app/', views.App, name='app'),
+    path('camera-management/', views.CameraManagement, name='camera-management'),
+    path('profile/', views.Profile, name='profile'),
+    path('profile/photo/', views.UploadPhoto, name='upload-photo'),
+    path('profile/edit/', views.UpdateProfile, name='edit-profile'),
 ]

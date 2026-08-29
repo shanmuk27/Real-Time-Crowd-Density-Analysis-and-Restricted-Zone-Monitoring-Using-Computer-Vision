@@ -1,0 +1,368 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Camera Management | CloudCount</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+<body class="frame-body">
+  <main class="dashboard dashboard-frame">
+    <div class="dashboard-body">
+      <div class="dashboard-welcome">
+        <h1 id="welcome-title">Camera Management</h1>
+        <p id="welcome-sub">Manage and monitor all CCTV cameras across your monitored zones.</p>
+      </div>
+
+      <div class="stats-grid cam-mgmt-stats">
+        <div class="stat-card crowd-card">
+          <div class="stat-label">Total Cameras</div>
+          <div class="stat-value" id="mgmt-total">0</div>
+          <div class="stat-delta">Across all zones</div>
+        </div>
+        <div class="stat-card identified-card">
+          <div class="stat-label">Active</div>
+          <div class="stat-value" id="mgmt-active">0</div>
+          <div class="stat-delta">● Online</div>
+        </div>
+        <div class="stat-card identified-card">
+          <div class="stat-label">Danger Zones</div>
+          <div class="stat-value" id="mgmt-danger">0</div>
+          <div class="stat-delta">High crowd density</div>
+        </div>
+      </div>
+
+      <section class="camera-cards-section">
+        <div class="section-heading">Cameras &amp; Locations</div>
+        <div class="camera-cards-grid mgmt-cards-grid" id="mgmt-cards-grid">
+          <div class="cam-card mgmt-card mgmt-add-card" onclick="openAddCamera()">
+            <div class="mgmt-add-symbol">＋</div>
+            <div class="mgmt-add-label">Add Camera</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="graph-modal" id="add-camera-modal" onclick="if(event.target===this)closeAddCamera()">
+    <div class="graph-modal-box mgmt-modal-box">
+      <div class="graph-modal-header">
+        <h3>Add Camera</h3>
+        <button class="graph-close" onclick="closeAddCamera()">✕</button>
+      </div>
+      <form class="mgmt-form" id="add-camera-form" onsubmit="return submitAddCamera(event)">
+        <div class="mgmt-form-grid">
+          <div class="form-group">
+            <label>Camera ID</label>
+            <input type="text" id="fcam-id" placeholder="e.g. CAM-007" />
+          </div>
+          <div class="form-group">
+            <label>Camera Name</label>
+            <input type="text" id="fcam-name" placeholder="e.g. Loading Bay" />
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" id="fcam-location" placeholder="e.g. Warehouse - East Side" />
+          </div>
+          <div class="form-group">
+            <label>Zone</label>
+            <input type="text" id="fcam-zone" placeholder="e.g. Restricted Zone" />
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select id="fcam-type">
+              <option value="Fixed IP Camera">Fixed IP Camera</option>
+              <option value="PTZ Camera">PTZ Camera</option>
+              <option value="360-Degree Camera">360-Degree Camera</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Resolution</label>
+            <select id="fcam-resolution">
+              <option value="1280 × 720">1280 × 720</option>
+              <option value="1920 × 1080">1920 × 1080</option>
+              <option value="2560 × 1440">2560 × 1440</option>
+              <option value="3840 × 2160">3840 × 2160</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Crowd Threshold</label>
+            <input type="number" id="fcam-threshold" min="1" placeholder="e.g. 50" />
+          </div>
+        </div>
+        <div class="alert" id="add-camera-error"></div>
+        <div class="mgmt-form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddCamera()">Cancel</button>
+          <button type="submit" class="btn">Add Camera</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="graph-modal" id="remove-camera-modal" onclick="if(event.target===this)closeRemoveCamera()">
+    <div class="graph-modal-box mgmt-modal-box mgmt-remove-box">
+      <div class="graph-modal-header">
+        <h3>Remove Camera</h3>
+        <button class="graph-close" onclick="closeRemoveCamera()">✕</button>
+      </div>
+      <div class="mgmt-remove-body">
+        <div class="mgmt-remove-cam">
+          <span class="cam-card-id" id="rm-cam-id"></span>
+          <span class="mgmt-remove-name" id="rm-cam-name"></span>
+        </div>
+        <p class="mgmt-remove-loc">Location: <strong id="rm-cam-location"></strong></p>
+        <p class="mgmt-remove-warn">This will remove the camera from your list. Please reverify before continuing.</p>
+        <label class="mgmt-reverify">
+          <input type="checkbox" id="rm-reverify" onchange="getField('rm-remove-btn').disabled = !this.checked" />
+          <span>I confirm and reverify removal of this camera</span>
+        </label>
+        <div class="alert" id="rm-error"></div>
+        <div class="mgmt-form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeRemoveCamera()">Cancel</button>
+          <button type="button" class="btn btn-danger" id="rm-remove-btn" disabled onclick="confirmRemoveCamera()">Remove</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script src="{% static 'js/demo_data.js' %}?v=2"></script>
+  <script>
+    function getField(id) {
+      return document.getElementById(id);
+    }
+
+    function getCameras() {
+      return (typeof DEMO_CAMERAS !== "undefined") ? DEMO_CAMERAS : [];
+    }
+
+    function camLocation(cam) {
+      return cam.location || cam.name || "Unknown Location";
+    }
+
+    function camStatus(cam) {
+      return cam.status || "active";
+    }
+
+    function buildAddCard() {
+      var card = document.createElement("div");
+      card.className = "cam-card mgmt-card mgmt-add-card";
+      card.onclick = openAddCamera;
+      var symbol = document.createElement("div");
+      symbol.className = "mgmt-add-symbol";
+      symbol.textContent = "＋";
+      var label = document.createElement("div");
+      label.className = "mgmt-add-label";
+      label.textContent = "Add Camera";
+      card.appendChild(symbol);
+      card.appendChild(label);
+      return card;
+    }
+
+    function openAddCamera() {
+      getField("add-camera-modal").classList.add("show");
+      getField("add-camera-error").className = "alert";
+      getField("add-camera-error").textContent = "";
+    }
+
+    function closeAddCamera() {
+      getField("add-camera-modal").classList.remove("show");
+    }
+
+    function submitAddCamera(event) {
+      event.preventDefault();
+      var id = getField("fcam-id").value.trim();
+      var name = getField("fcam-name").value.trim();
+      var location = getField("fcam-location").value.trim();
+      var zone = getField("fcam-zone").value.trim();
+      var type = getField("fcam-type").value;
+      var resolution = getField("fcam-resolution").value;
+      var threshold = parseInt(getField("fcam-threshold").value, 10);
+      var errorEl = getField("add-camera-error");
+
+      errorEl.className = "alert";
+
+      if (!id) { showAddError(errorEl, "Camera ID is required."); return false; }
+      if (!name) { showAddError(errorEl, "Camera name is required."); return false; }
+      if (!location) { showAddError(errorEl, "Location is required."); return false; }
+      if (!zone) { showAddError(errorEl, "Zone is required."); return false; }
+      if (!threshold || isNaN(threshold) || threshold < 1) { showAddError(errorEl, "Enter a valid crowd threshold."); return false; }
+
+      var cameras = getCameras();
+      if (cameras.some(function (c) { return c.id.toLowerCase() === id.toLowerCase(); })) {
+        showAddError(errorEl, "A camera with ID " + id + " already exists.");
+        return false;
+      }
+
+      cameras.push({
+        id: id,
+        name: name,
+        location: location,
+        zone: zone,
+        type: type,
+        resolution: resolution,
+        threshold: threshold,
+        status: "active",
+      });
+
+      closeAddCamera();
+      renderAll();
+      return false;
+    }
+
+    function removeCamera(id) {
+      var cameras = getCameras();
+      var cam = cameras.find(function (c) { return c.id === id; });
+      if (!cam) return;
+
+      getField("rm-cam-id").textContent = cam.id;
+      getField("rm-cam-name").textContent = cam.name || "Camera";
+      getField("rm-cam-location").textContent = camLocation(cam);
+      getField("rm-reverify").checked = false;
+      getField("rm-remove-btn").disabled = true;
+      getField("rm-error").className = "alert";
+      getField("rm-error").textContent = "";
+      getField("remove-camera-modal").classList.add("show");
+    }
+
+    function confirmRemoveCamera() {
+      var rmEl = getField("rm-reverify");
+      var errorEl = getField("rm-error");
+
+      if (!rmEl.checked) {
+        errorEl.className = "alert alert-error show";
+        errorEl.textContent = 'Please tick "Reverify" to confirm removing this camera.';
+        return;
+      }
+
+      var cameras = getCameras();
+      var id = getField("rm-cam-id").textContent;
+      var cam = cameras.find(function (c) { return c.id === id; });
+      if (!cam) return;
+
+      var index = cameras.indexOf(cam);
+      if (index > -1) cameras.splice(index, 1);
+      closeRemoveCamera();
+      renderAll();
+    }
+
+    function closeRemoveCamera() {
+      getField("remove-camera-modal").classList.remove("show");
+    }
+
+    function showAddError(el, message) {
+      el.className = "alert alert-error show";
+      el.textContent = message;
+    }
+
+    function refreshStats() {
+      var cameras = getCameras();
+      var active = 0;
+      var danger = 0;
+      cameras.forEach(function (cam) {
+        var status = camStatus(cam);
+        if (status === "active") active++;
+        if (status === "danger") danger++;
+      });
+      getField("mgmt-total").textContent = cameras.length;
+      getField("mgmt-active").textContent = active;
+      getField("mgmt-danger").textContent = danger;
+    }
+
+    function renderAll() {
+      var grid = getField("mgmt-cards-grid");
+      grid.innerHTML = "";
+      grid.appendChild(buildAddCard());
+      getCameras().forEach(function (cam) {
+        grid.appendChild(buildCard(cam));
+      });
+      refreshStats();
+    }
+
+    function buildCard(cam) {
+      var status = camStatus(cam);
+      var danger = status === "danger";
+      var online = status === "active";
+
+      var card = document.createElement("div");
+      card.className = "cam-card mgmt-card" + (danger ? " danger" : "");
+
+      var head = document.createElement("div");
+      head.className = "cam-card-head";
+      var icon = document.createElement("span");
+      icon.className = "mgmt-cam-icon";
+      icon.textContent = "📷";
+      var nameWrap = document.createElement("div");
+      nameWrap.className = "mgmt-cam-name-wrap";
+      var name = document.createElement("span");
+      name.className = "cam-card-name";
+      name.textContent = camLocation(cam);
+      nameWrap.appendChild(name);
+      var id = document.createElement("span");
+      id.className = "cam-card-id";
+      id.textContent = cam.id;
+      var st = document.createElement("span");
+      st.className = "cam-card-status " + (danger ? "status-danger" : (online ? "status-ok" : "status-danger"));
+      st.textContent = danger ? "● Danger" : (online ? "● Active" : "● Offline");
+      var rm = document.createElement("button");
+      rm.className = "mgmt-remove-btn";
+      rm.title = "Remove " + cam.id;
+      rm.textContent = "🗑";
+      rm.onclick = function (e) {
+        e.stopPropagation();
+        removeCamera(cam.id);
+      };
+
+      head.appendChild(icon);
+      head.appendChild(nameWrap);
+      head.appendChild(id);
+      head.appendChild(st);
+      head.appendChild(rm);
+
+      var body = document.createElement("div");
+      body.className = "mgmt-card-meta";
+
+      var rows = [
+        ["Camera", cam.name || cam.id],
+        ["Location", camLocation(cam)],
+        ["Type", cam.type || "Fixed IP Camera"],
+        ["Resolution", cam.resolution || "1920 × 1080"],
+        ["Threshold", cam.threshold != null ? cam.threshold + " people" : "—"],
+        ["Zone", cam.zone || "General"],
+      ];
+
+      rows.forEach(function (r) {
+        var row = document.createElement("div");
+        row.className = "mgmt-meta-row";
+        var label = document.createElement("span");
+        label.className = "mgmt-meta-label";
+        label.textContent = r[0];
+        var value = document.createElement("span");
+        value.className = "mgmt-meta-value";
+        value.textContent = r[1];
+        row.appendChild(label);
+        row.appendChild(value);
+        body.appendChild(row);
+      });
+
+      card.appendChild(head);
+      card.appendChild(body);
+      return card;
+    }
+
+    (async () => {
+      const user = await Auth.currentUser();
+      if (!user) {
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+        return;
+      }
+
+      renderAll();
+    })();
+  </script>
+</body>
+</html>

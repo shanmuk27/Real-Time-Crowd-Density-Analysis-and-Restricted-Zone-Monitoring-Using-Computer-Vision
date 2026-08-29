@@ -1,0 +1,107 @@
+const DEMO_USER_DATA = {
+  1: { user_id: "john_doe", name: "John Doe", email: "john@example.com" },
+  2: { user_id: "jane_smith", name: "Jane Smith", email: "jane@example.com" },
+  3: { user_id: "alex_wang", name: "Alex Wang", email: "alex@example.com" },
+  4: { user_id: "maria_garcia", name: "Maria Garcia", email: "maria@example.com" },
+  5: { user_id: "sam_johnson", name: "Sam Johnson", email: "sam@example.com" },
+  6: { user_id: "emma_wilson", name: "Emma Wilson", email: "emma@example.com" },
+  7: { user_id: "david_brown", name: "David Brown", email: "david@example.com" },
+  8: { user_id: "sarah_miller", name: "Sarah Miller", email: "sarah@example.com" },
+  9: { user_id: "michael_davis", name: "Michael Davis", email: "michael@example.com" },
+  10: { user_id: "lisa_anderson", name: "Lisa Anderson", email: "lisa@example.com" },
+};
+
+const DEMO_NOTIFICATIONS = [
+  { icon: "📷", message: "Camera CAM-004 went offline", time: "2 min ago", unread: true },
+  { icon: "⚠️", message: "High crowd density detected in Zone A", time: "15 min ago", unread: true },
+  { icon: "✅", message: "System health check completed successfully", time: "1 hr ago", unread: true },
+  { icon: "🔐", message: "New admin login detected", time: "3 hrs ago", unread: false },
+  { icon: "📊", message: "Daily crowd report is ready", time: "5 hrs ago", unread: false },
+  { icon: "🔔", message: "Camera firmware update available", time: "1 day ago", unread: false },
+];
+
+const DEMO_MONTHLY_CROWD = [
+  { day: "1", count: 68 },
+  { day: "2", count: 91 },
+  { day: "3", count: 55 },
+  { day: "4", count: 120 },
+  { day: "5", count: 44 },
+  { day: "6", count: 132 },
+  { day: "7", count: 87 },
+  { day: "8", count: 63 },
+  { day: "9", count: 108 },
+  { day: "10", count: 75 },
+  { day: "11", count: 96 },
+  { day: "12", count: 58 },
+  { day: "13", count: 140 },
+  { day: "14", count: 39 },
+  { day: "15", count: 112 },
+  { day: "16", count: 70 },
+  { day: "17", count: 84 },
+  { day: "18", count: 101 },
+  { day: "19", count: 66 },
+  { day: "20", count: 124 },
+  { day: "21", count: 53 },
+  { day: "22", count: 89 },
+  { day: "23", count: 145 },
+  { day: "24", count: 61 },
+  { day: "25", count: 98 },
+  { day: "26", count: 72 },
+  { day: "27", count: 118 },
+  { day: "28", count: 47 },
+  { day: "29", count: 105 },
+  { day: "30", count: 83 },
+];
+
+const DEMO_CAMERA_PERSONS = [
+  { id: 1, name: "Unknown", verified: false, zone: "Entrance Gate A" },
+  { id: 2, name: "Unknown", verified: false, zone: "Restricted Zone B" },
+  { id: 3, name: "Unknown", verified: false, zone: "Parking Area" },
+  { id: 4, name: "John Doe", verified: true },
+  { id: 5, name: "Jane Smith", verified: true },
+  { id: 6, name: "Alex Wang", verified: true },
+  { id: 7, name: "Maria Garcia", verified: true },
+  { id: 8, name: "David Johnson", verified: true },
+  { id: 9, name: "Priya Patel", verified: true },
+  { id: 10, name: "Michael Brown", verified: true },
+  { id: 11, name: "Sofia Rossi", verified: true },
+  { id: 12, name: "Liam Chen", verified: true },
+  { id: 13, name: "Emma Wilson", verified: true },
+  { id: 14, name: "Noah Kim", verified: true },
+];
+
+const DEMO_LIVE_CROWD = [
+  { time: "09:00", count: 20 },
+  { time: "09:15", count: 34 },
+  { time: "09:30", count: 42 },
+  { time: "09:45", count: 58 },
+  { time: "10:00", count: 71 },
+  { time: "10:15", count: 66 },
+  { time: "10:30", count: 89 },
+  { time: "10:45", count: 104 },
+  { time: "11:00", count: 118 },
+  { time: "11:15", count: 97 },
+  { time: "11:30", count: 123 },
+  { time: "11:45", count: 135 },
+  { time: "12:00", count: 112 },
+];
+
+const DEMO_CAMERAS = [
+  { id: "CAM-001", name: "Entrance Gate A", location: "Main Building - South Entrance", zone: "Public Zone", type: "Fixed IP Camera", resolution: "1920 × 1080", threshold: 80, status: "active" },
+  { id: "CAM-002", name: "Restricted Zone B", location: "Server Room - Floor 2", zone: "Restricted Zone", type: "PTZ Camera", resolution: "2560 × 1440", threshold: 30, status: "danger" },
+  { id: "CAM-003", name: "Parking Area", location: "North Parking Lot", zone: "Public Zone", type: "Fixed IP Camera", resolution: "1280 × 720", threshold: 60, status: "active" },
+  { id: "CAM-004", name: "Main Hall", location: "Auditorium - Floor 1", zone: "Public Zone", type: "360-Degree Camera", resolution: "3840 × 2160", threshold: 100, status: "active" },
+  { id: "CAM-005", name: "Corridor C", location: "Office Wing - Floor 3", zone: "Staff Zone", type: "Fixed IP Camera", resolution: "1920 × 1080", threshold: 40, status: "active" },
+  { id: "CAM-006", name: "Stairwell D", location: "Emergency Exit - West", zone: "Restricted Zone", type: "Fixed IP Camera", resolution: "1280 × 720", threshold: 25, status: "offline" },
+];
+
+const DEMO_TEAM_MEMBERS = [
+  { id: 1, name: "John Doe", email: "john@example.com", role: "admin", active: true },
+  { id: 2, name: "Jane Smith", email: "jane@example.com", role: "analyst", active: true },
+  { id: 3, name: "Alex Wang", email: "alex@example.com", role: "developer", active: false },
+  { id: 4, name: "Maria Garcia", email: "maria@example.com", role: "client", active: true },
+  { id: 5, name: "Sam Johnson", email: "sam@example.com", role: "analyst", active: true },
+  { id: 6, name: "Emma Wilson", email: "emma@example.com", role: "developer", active: false },
+  { id: 7, name: "David Brown", email: "david@example.com", role: "client", active: true },
+  { id: 8, name: "Sarah Miller", email: "sarah@example.com", role: "analyst", active: true },
+];

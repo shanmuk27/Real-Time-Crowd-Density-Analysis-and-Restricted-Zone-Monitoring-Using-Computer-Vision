@@ -1,0 +1,217 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile | CloudCount</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=19" />
+</head>
+<body class="frame-body">
+  <main class="dashboard dashboard-frame">
+    <div class="dashboard-body profile-body">
+      <div class="dashboard-welcome">
+        <h1 id="welcome-title">My Profile</h1>
+        <p id="welcome-sub">Your account details and profile photo.</p>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-photo-wrap">
+          <div class="profile-photo" id="profile-photo"></div>
+          <button class="photo-upload-btn" id="photo-upload-btn" onclick="getField('photo-input').click()" title="Change profile photo">📷</button>
+          <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="uploadPhoto(this)" />
+        </div>
+
+        <div class="profile-head">
+          <h2 id="profile-name">—</h2>
+          <span class="role-badge" id="profile-role"></span>
+        </div>
+      </div>
+
+      <div class="profile-details-card">
+        <div class="profile-details-head">
+          <div class="section-heading">Account Details</div>
+          <div class="profile-details-head-actions">
+            <button class="profile-edit-btn" id="profile-edit-btn" onclick="openEdit()" title="Edit profile">✏️ Edit</button>
+            <div class="alert" id="photo-message"></div>
+          </div>
+        </div>
+        <div class="profile-details-grid">
+          <div class="profile-detail">
+            <span class="profile-detail-label">User ID</span>
+            <span class="profile-detail-value" id="detail-id">—</span>
+          </div>
+          <div class="profile-detail">
+            <span class="profile-detail-label">Full Name</span>
+            <span class="profile-detail-value" id="detail-name">—</span>
+          </div>
+          <div class="profile-detail">
+            <span class="profile-detail-label">Email Address</span>
+            <span class="profile-detail-value" id="detail-email">—</span>
+          </div>
+          <div class="profile-detail">
+            <span class="profile-detail-label">Role</span>
+            <span class="profile-detail-value" id="detail-role">—</span>
+          </div>
+          <div class="profile-detail">
+            <span class="profile-detail-label">Access Control</span>
+            <span class="profile-detail-value" id="detail-control">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="graph-modal" id="edit-modal" onclick="if(event.target===this)closeEdit()">
+    <div class="graph-modal-box mgmt-modal-box">
+      <div class="graph-modal-header">
+        <h3>Edit Profile</h3>
+        <button class="graph-close" onclick="closeEdit()">✕</button>
+      </div>
+      <form class="mgmt-form" id="edit-form" onsubmit="return submitEdit(event)">
+        <div class="mgmt-form-grid">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="edit-name" placeholder="Your name" />
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="edit-email" placeholder="you@example.com" />
+          </div>
+        </div>
+        <div class="alert" id="edit-message"></div>
+        <div class="mgmt-form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeEdit()">Cancel</button>
+          <button type="submit" class="btn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script>
+    function getField(id) {
+      return document.getElementById(id);
+    }
+
+    function photoUrl(user) {
+      return user.photo && user.photo.length ? user.photo : "";
+    }
+
+    function renderPhoto(user) {
+      var box = getField("profile-photo");
+      var url = photoUrl(user);
+      var initial = user.name.trim().charAt(0).toUpperCase();
+      if (url) {
+        box.innerHTML = '<img src="' + url + '" alt="Profile photo" />';
+      } else {
+        box.textContent = initial;
+      }
+    }
+
+    async function uploadPhoto(input) {
+      var file = input.files && input.files[0];
+      var msg = getField("photo-message");
+      msg.className = "alert";
+      msg.textContent = "";
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        msg.className = "alert alert-error show";
+        msg.textContent = "Photo must be smaller than 5 MB.";
+        return;
+      }
+
+      msg.className = "alert alert-success show";
+      msg.textContent = "Uploading...";
+
+      var res = await Auth.uploadPhoto(file);
+      if (res.ok) {
+        msg.textContent = "Profile photo updated.";
+        renderPhoto({ name: getField("detail-name").textContent, photo: res.photo });
+      } else {
+        msg.className = "alert alert-error show";
+        msg.textContent = res.message || "Upload failed. Please try again.";
+      }
+    }
+
+    function populate(user) {
+      getField("profile-name").textContent = user.name;
+      getField("profile-role").textContent = user.role;
+      getField("profile-role").classList.add(user.role);
+
+      getField("detail-id").textContent = user.id;
+      getField("detail-name").textContent = user.name;
+      getField("detail-email").textContent = user.email;
+      getField("detail-role").textContent = user.role;
+      getField("detail-control").textContent = user.control || "full";
+
+      renderPhoto(user);
+    }
+
+    function openEdit() {
+      getField("edit-name").value = getField("detail-name").textContent;
+      getField("edit-email").value = getField("detail-email").textContent;
+      getField("edit-message").className = "alert";
+      getField("edit-message").textContent = "";
+      getField("edit-modal").classList.add("show");
+    }
+
+    function closeEdit() {
+      getField("edit-modal").classList.remove("show");
+    }
+
+    async function submitEdit(event) {
+      event.preventDefault();
+      var msg = getField("edit-message");
+      var name = getField("edit-name").value.trim();
+      var email = getField("edit-email").value.trim();
+      msg.className = "alert";
+      msg.textContent = "";
+
+      if (!name || !email) {
+        msg.className = "alert alert-error show";
+        msg.textContent = "Both fields are required.";
+        return false;
+      }
+      if (!validateEmail(email)) {
+        msg.className = "alert alert-error show";
+        msg.textContent = "Enter a valid email address.";
+        return false;
+      }
+
+      msg.className = "alert alert-success show";
+      msg.textContent = "Saving...";
+
+      var res = await Auth.updateProfile({ name: name, email: email });
+      if (res.ok) {
+        msg.className = "alert alert-success show";
+        msg.textContent = "Profile updated.";
+        getField("detail-name").textContent = res.user.name;
+        getField("detail-email").textContent = res.user.email;
+        getField("profile-name").textContent = res.user.name;
+        if (getField("profile-photo").textContent) {
+          renderPhoto(res.user);
+        }
+        setTimeout(closeEdit, 900);
+      } else {
+        msg.className = "alert alert-error show";
+        msg.textContent = res.message || "Could not update profile. Please try again.";
+      }
+      return false;
+    }
+
+    (async () => {
+      const user = await Auth.currentUser();
+      if (!user) {
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+        return;
+      }
+      populate(user);
+    })();
+  </script>
+</body>
+</html>
