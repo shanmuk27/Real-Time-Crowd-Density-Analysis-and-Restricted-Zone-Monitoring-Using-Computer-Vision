@@ -73,8 +73,402 @@
     </div>
   </main>
 
+<<<<<<< Updated upstream
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
+=======
+  <script src="{% static 'js/api.js' %}?v=1"></script>
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script>
+    function renderBars(count, data, showLabels) {
+      if (!data || !data.length) return;
+      var max = 0;
+      data.forEach(function (d) {
+        if (d.count > max) max = d.count;
+      });
+      count.innerHTML = "";
+      data.forEach(function (d) {
+        var col = document.createElement("div");
+        col.className = "bar-col";
+        var bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.height = (d.count / max) * 100 + "%";
+        bar.title = "Day " + d.day + ": " + d.count;
+        if (showLabels) {
+          var value = document.createElement("span");
+          value.className = "bar-value";
+          value.textContent = d.count;
+          bar.appendChild(value);
+        }
+        col.appendChild(bar);
+        var label = document.createElement("span");
+        label.className = "bar-label";
+        label.textContent = d.day;
+        col.appendChild(label);
+        count.appendChild(col);
+      });
+    }
+
+    async function buildMiniChart() {
+      var mini = document.getElementById("mini-chart");
+      var data = await API.getMonthlyCrowd();
+      renderBars(mini, data.slice(0, 14), false);
+    }
+
+    async function buildLargeChart() {
+      var large = document.getElementById("large-chart");
+      var data = await API.getMonthlyCrowd();
+      renderBars(large, data, true);
+    }
+
+    function openCrowdGraph() {
+      buildLargeChart();
+      document.getElementById("graph-modal").classList.add("show");
+    }
+
+    function closeCrowdGraph() {
+      document.getElementById("graph-modal").classList.remove("show");
+    }
+
+    async function getPersons() {
+      return await API.getPersons();
+    }
+
+    async function renderIdentified() {
+      var list = document.getElementById("identified-list");
+      var persons = (await getPersons()).slice().sort(function (a, b) {
+        return (a.verified ? 1 : 0) - (b.verified ? 1 : 0);
+      });
+      list.innerHTML = "";
+      var verified = 0;
+      persons.forEach(function (p) {
+        if (p.verified) verified++;
+        var row = document.createElement("div");
+        row.className = "identified-row" + (p.verified ? " verified" : " unverified");
+        row.onclick = function () {
+          if (!p.verified) openCameraView(p);
+        };
+        var avatar = document.createElement("span");
+        avatar.className = "identified-avatar";
+        avatar.textContent = p.name.trim().charAt(0).toUpperCase();
+        var info = document.createElement("div");
+        info.className = "identified-info";
+        var name = document.createElement("span");
+        name.className = "identified-name";
+        name.textContent = p.name;
+        var badge = document.createElement("span");
+        badge.className = "identified-badge " + (p.verified ? "badge-verified" : "badge-unverified");
+        badge.textContent = p.verified ? "● Verified" : "● Unverified";
+        info.appendChild(name);
+        info.appendChild(badge);
+        if (!p.verified) {
+          var cam = document.createElement("button");
+          cam.className = "view-cam-btn";
+          cam.textContent = "View camera";
+          info.appendChild(cam);
+        }
+        row.appendChild(avatar);
+        row.appendChild(info);
+        list.appendChild(row);
+      });
+      getField("identified-count").textContent =
+        persons.length + " present • " + verified + " verified • " + (persons.length - verified) + " unverified";
+    }
+
+    function openCameraView(person) {
+      document.getElementById("camera-modal-title").textContent = "Camera View — " + person.name;
+      document.getElementById("camera-live").innerHTML =
+        '<div class="cam-alert">⚠️ Unknown / Unverified person</div>' +
+        '<div class="cam-person">' + person.name.trim().charAt(0).toUpperCase() + "</div>";
+      var zone = person.zone || "Camera Area";
+      document.getElementById("camera-feed-caption").textContent =
+        "Detected: " + person.name + " • Location: " + zone + " • Status: Unverified";
+      document.getElementById("camera-modal").classList.add("show");
+    }
+
+    function closeCameraView() {
+      document.getElementById("camera-modal").classList.remove("show");
+    }
+
+    async function getLiveCrowdData() {
+      return await API.getLiveCrowd();
+    }
+
+    async function getCamerasData() {
+      return await API.getCameras();
+    }
+
+    function randomCrowd(threshold) {
+      var current = Math.floor(Math.random() * (threshold * 1.6));
+      return Math.min(current + 10, threshold + 30);
+    }
+
+    function buildSparkline(points, danger) {
+      var W = 120;
+      var H = 40;
+      var max = 1;
+      points.forEach(function (p) {
+        if (p > max) max = p;
+      });
+      var step = W / (points.length - 1);
+      var coords = points.map(function (p, i) {
+        return (i * step).toFixed(1) + "," + (H - (p / max) * (H - 4)).toFixed(1);
+      });
+      var path = "M" + coords.join(" L");
+      var svgNS = "http://www.w3.org/2000/svg";
+      var svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.setAttribute("class", "cam-spark");
+      var line = document.createElementNS(svgNS, "path");
+      line.setAttribute("d", path);
+      line.setAttribute("fill", "none");
+      line.setAttribute("stroke", danger ? "#dc2626" : "#2563eb");
+      line.setAttribute("stroke-width", "2");
+      line.setAttribute("stroke-linecap", "round");
+      line.setAttribute("stroke-linejoin", "round");
+      line.setAttribute("vector-effect", "non-scaling-stroke");
+      svg.appendChild(line);
+      return svg;
+    }
+
+    function buildLiveChartFromData(data) {
+      var chart = document.getElementById("live-chart");
+      chart.innerHTML = "";
+      if (!data || !data.length) return;
+
+      var max = 0;
+      data.forEach(function (d) {
+        if (d.count > max) max = d.count;
+      });
+      if (max === 0) max = 1;
+
+      var W = 900;
+      var H = 220;
+      var padX = 40;
+      var padTop = 20;
+      var padBottom = 34;
+      var n = data.length;
+      var step = (W - padX * 2) / (n - 1);
+
+      function x(i) {
+        return padX + i * step;
+      }
+      function y(v) {
+        return H - padBottom - ((v / max) * (H - padTop - padBottom));
+      }
+
+      var points = data.map(function (d, i) {
+        return x(i) + "," + y(d.count);
+      });
+      var linePath = "M" + points.join(" L");
+      var areaPath = linePath +
+        " L" + (W - padX) + "," + (H - padBottom) +
+        " L" + padX + "," + (H - padBottom) + " Z";
+
+      var svgNS = "http://www.w3.org/2000/svg";
+      var svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.setAttribute("class", "line-chart-svg");
+
+      var area = document.createElementNS(svgNS, "path");
+      area.setAttribute("d", areaPath);
+      area.setAttribute("fill", "url(#liveGrad)");
+      area.setAttribute("class", "line-chart-area");
+
+      var line = document.createElementNS(svgNS, "path");
+      line.setAttribute("d", linePath);
+      line.setAttribute("fill", "none");
+      line.setAttribute("class", "line-chart-line");
+
+      var defs = document.createElementNS(svgNS, "defs");
+      var grad = document.createElementNS(svgNS, "linearGradient");
+      grad.setAttribute("id", "liveGrad");
+      grad.setAttribute("x1", "0");
+      grad.setAttribute("y1", "0");
+      grad.setAttribute("x2", "0");
+      grad.setAttribute("y2", "1");
+      var stop1 = document.createElementNS(svgNS, "stop");
+      stop1.setAttribute("offset", "0%");
+      stop1.setAttribute("stop-color", "#2563eb");
+      stop1.setAttribute("stop-opacity", "0.4");
+      var stop2 = document.createElementNS(svgNS, "stop");
+      stop2.setAttribute("offset", "100%");
+      stop2.setAttribute("stop-color", "#2563eb");
+      stop2.setAttribute("stop-opacity", "0");
+      grad.appendChild(stop1);
+      grad.appendChild(stop2);
+      defs.appendChild(grad);
+      svg.appendChild(defs);
+      svg.appendChild(area);
+      svg.appendChild(line);
+
+      data.forEach(function (d, i) {
+        var g = document.createElementNS(svgNS, "g");
+
+        var dot = document.createElementNS(svgNS, "circle");
+        dot.setAttribute("cx", x(i));
+        dot.setAttribute("cy", y(d.count));
+        dot.setAttribute("r", "4");
+        dot.setAttribute("class", "line-chart-dot");
+
+        var tLabel = document.createElementNS(svgNS, "text");
+        tLabel.setAttribute("x", x(i));
+        tLabel.setAttribute("y", H - 12);
+        tLabel.setAttribute("text-anchor", "middle");
+        tLabel.setAttribute("class", "line-chart-tick");
+        tLabel.textContent = d.time;
+
+        var vLabel = document.createElementNS(svgNS, "text");
+        vLabel.setAttribute("x", x(i));
+        vLabel.setAttribute("y", y(d.count) - 10);
+        vLabel.setAttribute("text-anchor", "middle");
+        vLabel.setAttribute("class", "line-chart-val");
+        vLabel.textContent = d.count;
+
+        g.appendChild(tLabel);
+        g.appendChild(vLabel);
+        g.appendChild(dot);
+        svg.appendChild(g);
+      });
+
+      chart.appendChild(svg);
+    }
+
+    function refreshLiveTotals(counts) {
+      var sum = 0;
+      var peak = 0;
+      counts.forEach(function (c) {
+        sum += c.count;
+        if (c.count > peak) peak = c.count;
+      });
+      var avg = counts.length ? Math.round(sum / counts.length) : 0;
+      getField("live-total-value").textContent = sum;
+      getField("stat-instances").textContent = sum;
+      getField("live-peak").textContent = peak;
+      getField("live-avg").textContent = avg;
+      getField("live-cameras").textContent = counts.length;
+    }
+
+    async function renderCameras() {
+      var grid = document.getElementById("camera-cards-grid");
+      var cameras = await getCamerasData();
+      if (!cameras.length) { grid.innerHTML = ""; return; }
+
+      var counts = [];
+      cameras.forEach(function (cam) {
+        var count = randomCrowd(cam.threshold);
+        counts.push({ cam: cam, count: count });
+      });
+
+      grid.innerHTML = "";
+      counts.forEach(function (item) {
+        var cam = item.cam;
+        var count = item.count;
+        var danger = count >= cam.threshold;
+
+        var card = document.createElement("div");
+        card.className = "cam-card" + (danger ? " danger" : "");
+
+        var head = document.createElement("div");
+        head.className = "cam-card-head";
+        var name = document.createElement("span");
+        name.className = "cam-card-name";
+        name.textContent = cam.name;
+        var id = document.createElement("span");
+        id.className = "cam-card-id";
+        id.textContent = cam.id;
+        var status = document.createElement("span");
+        status.className = "cam-card-status " + (danger ? "status-danger" : "status-ok");
+        status.textContent = danger ? "● Danger" : "● Active";
+
+        head.appendChild(name);
+        head.appendChild(id);
+        head.appendChild(status);
+
+        var body = document.createElement("div");
+        body.className = "cam-card-body";
+
+        var left = document.createElement("div");
+        left.className = "cam-card-left";
+        var num = document.createElement("div");
+        num.className = "cam-card-count";
+        num.textContent = count;
+        var numLabel = document.createElement("div");
+        numLabel.className = "cam-card-count-label";
+        numLabel.textContent = "people";
+        var thresh = document.createElement("div");
+        thresh.className = "cam-card-threshold";
+        thresh.textContent = "Threshold " + cam.threshold;
+        left.appendChild(num);
+        left.appendChild(numLabel);
+        left.appendChild(thresh);
+
+        var right = document.createElement("div");
+        right.className = "cam-card-chart";
+        right.appendChild(buildSparkline([count * 0.4, count * 0.8, count * 0.6, count], danger));
+
+        body.appendChild(left);
+        body.appendChild(right);
+
+        card.appendChild(head);
+        card.appendChild(body);
+        grid.appendChild(card);
+      });
+
+      refreshLiveTotals(counts);
+    }
+
+    async function getTeamMembersData() {
+      return await API.getTeamMembers();
+    }
+
+    async function renderTeam() {
+      var list = document.getElementById("team-access-list");
+      var members = await getTeamMembersData();
+      list.innerHTML = "";
+      var active = 0;
+
+      members.forEach(function (m) {
+        if (m.active) active++;
+        var row = document.createElement("div");
+        row.className = "team-row";
+
+        var avatar = document.createElement("span");
+        avatar.className = "team-avatar";
+        avatar.textContent = m.name.trim().charAt(0).toUpperCase();
+
+        var info = document.createElement("div");
+        info.className = "team-info";
+        var name = document.createElement("div");
+        name.className = "team-name";
+        name.textContent = m.name;
+        var meta = document.createElement("div");
+        meta.className = "team-meta";
+        meta.textContent = m.role + " • " + m.email;
+        info.appendChild(name);
+        info.appendChild(meta);
+
+        var state = document.createElement("span");
+        state.className = "team-state " + (m.active ? "state-active" : "state-deactivated");
+        state.textContent = m.active ? "● Active" : "● Deactivated";
+
+        var btn = document.createElement("button");
+        btn.className = "team-toggle " + (m.active ? "btn-deactivate" : "btn-activate");
+        btn.textContent = m.active ? "Deactivate" : "Activate";
+
+        row.appendChild(avatar);
+        row.appendChild(info);
+        row.appendChild(state);
+        row.appendChild(btn);
+        list.appendChild(row);
+      });
+
+      getField("team-active-count").textContent = active + " of " + members.length + " active";
+    }
+
+>>>>>>> Stashed changes
     (async () => {
       const user = await Auth.currentUser();
 
@@ -97,6 +491,7 @@
         new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }) +
         ".";
 
+<<<<<<< Updated upstream
       const stats = {
         instances: { admin: 342, client: 12, developer: 58, analyst: 342 }[role] || 12,
         storage: { admin: "48.2 TB", client: "3.1 TB", developer: "12.6 TB", analyst: "48.2 TB" }[role],
@@ -132,6 +527,18 @@
           list.appendChild(tag);
         });
       }
+=======
+      await buildMiniChart();
+
+      await renderIdentified();
+
+      var liveData = await getLiveCrowdData();
+      buildLiveChartFromData(liveData.live_crowd || []);
+
+      await renderCameras();
+
+      await renderTeam();
+>>>>>>> Stashed changes
 
       getField("logout-btn").addEventListener("click", async () => {
         await Auth.logout();
