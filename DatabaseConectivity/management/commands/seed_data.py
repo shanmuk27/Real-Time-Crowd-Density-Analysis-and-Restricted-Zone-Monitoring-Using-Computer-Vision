@@ -33,9 +33,9 @@ class Command(BaseCommand):
         # Cameras
         cameras_data = [
             ('CAM-001', 'Entrance Gate A', 'Main Building - South Entrance', 'Public Zone', 'Fixed IP Camera', '1920 × 1080', 80, 'active'),
-            ('CAM-002', 'Restricted Zone B', 'Server Room - Floor 2', 'Restricted Zone', 'PTZ Camera', '2560 × 1440', 30, 'danger'),
+            ('CAM-002', 'Restricted Zone B', 'Server Room - Floor 2', 'Restricted Zone', 'Web Cam', '2560 × 1440', 30, 'danger'),
             ('CAM-003', 'Parking Area', 'North Parking Lot', 'Public Zone', 'Fixed IP Camera', '1280 × 720', 60, 'active'),
-            ('CAM-004', 'Main Hall', 'Auditorium - Floor 1', 'Public Zone', '360-Degree Camera', '3840 × 2160', 100, 'active'),
+            ('CAM-004', 'Main Hall', 'Auditorium - Floor 1', 'Public Zone', 'Video File', '3840 × 2160', 100, 'active'),
             ('CAM-005', 'Corridor C', 'Office Wing - Floor 3', 'Staff Zone', 'Fixed IP Camera', '1920 × 1080', 40, 'active'),
             ('CAM-006', 'Stairwell D', 'Emergency Exit - West', 'Restricted Zone', 'Fixed IP Camera', '1280 × 720', 25, 'offline'),
         ]
@@ -101,5 +101,15 @@ class Command(BaseCommand):
         for icon, message, unread in notifications_data:
             Notification.objects.create(icon=icon, message=message, unread=unread)
         self.stdout.write(self.style.SUCCESS(f'Created {len(notifications_data)} notifications'))
+
+        # Live crowd records
+        CrowdRecord.objects.all().delete()
+        live_total = 0
+        for cam in Camera.objects.all():
+            for hour in range(0, 24, 2):
+                count = (hour * 7 + len(cam.camera_id) * 5) % 85 + 5
+                CrowdRecord.objects.create(camera=cam, count=count)
+                live_total += 1
+        self.stdout.write(self.style.SUCCESS(f'Created {live_total} crowd records'))
 
         self.stdout.write(self.style.SUCCESS('Database seeded successfully!'))

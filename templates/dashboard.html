@@ -41,6 +41,11 @@
           <div class="stat-value" id="stat-instances">0</div>
           <div class="stat-delta">▲ 12 this month</div>
         </div>
+        <div class="stat-card graph-card" id="monthly-crowd-card" onclick="openCrowdGraph()">
+          <div class="stat-label">Monthly Crowd Analysis</div>
+          <div class="mini-chart" id="mini-chart"></div>
+          <div class="stat-delta">Click to expand ▲</div>
+        </div>
         <div class="stat-card">
           <div class="stat-label">Storage used</div>
           <div class="stat-value" id="stat-storage">0 TB</div>
@@ -55,6 +60,67 @@
           <div class="stat-label">Service health</div>
           <div class="stat-value" id="stat-health">99.9%</div>
           <div class="stat-delta">All systems operational</div>
+        </div>
+        <div class="stat-card identified-card">
+          <div class="stat-label">Identified Area</div>
+          <div class="identified-list" id="identified-list"></div>
+          <div class="stat-delta" id="identified-count"></div>
+        </div>
+      </div>
+
+      <div class="total-crowd-card">
+        <div class="total-crowd-header">
+          <div>
+            <div class="stat-label">Total Crowd Live</div>
+            <div class="total-crowd-value" id="live-total-value">0</div>
+          </div>
+          <div class="total-crowd-stats">
+            <div class="tc-stat"><span class="tc-stat-label">Peak</span><span class="tc-stat-val" id="live-peak">0</span></div>
+            <div class="tc-stat"><span class="tc-stat-label">Avg</span><span class="tc-stat-val" id="live-avg">0</span></div>
+            <div class="tc-stat"><span class="tc-stat-label">Cameras</span><span class="tc-stat-val" id="live-cameras">0</span></div>
+          </div>
+        </div>
+        <div class="live-chart" id="live-chart"></div>
+      </div>
+
+      <section class="camera-cards-section">
+        <div class="section-heading">Live Cameras</div>
+        <div class="camera-cards-grid" id="camera-cards-grid"></div>
+      </section>
+
+      <section class="team-access-card">
+        <div class="team-access-head">
+          <div>
+            <div class="section-heading">Team Access</div>
+            <p class="team-access-sub">Team members assigned by the admin</p>
+          </div>
+          <div class="team-access-count" id="team-active-count"></div>
+        </div>
+        <div class="team-access-list" id="team-access-list"></div>
+      </section>
+
+      <div class="graph-modal" id="graph-modal" onclick="if(event.target===this)closeCrowdGraph()">
+        <div class="graph-modal-box">
+          <div class="graph-modal-header">
+            <h3>Monthly Crowd Analysis</h3>
+            <button class="graph-close" onclick="closeCrowdGraph()">✕</button>
+          </div>
+          <div class="large-chart" id="large-chart"></div>
+        </div>
+      </div>
+
+      <div class="graph-modal" id="camera-modal" onclick="if(event.target===this)closeCameraView()">
+        <div class="graph-modal-box">
+          <div class="graph-modal-header">
+            <h3 id="camera-modal-title">Camera View</h3>
+            <button class="graph-close" onclick="closeCameraView()">✕</button>
+          </div>
+          <div class="camera-view-body">
+            <div class="camera-feed" id="camera-feed">
+              <div class="camera-live" id="camera-live"></div>
+              <div class="camera-feed-footer" id="camera-feed-caption"></div>
+            </div>
+          </div>
         </div>
       </div>
 
