@@ -74,39 +74,39 @@
           </div>
           <div class="form-group">
             <label>Type</label>
-            <select id="fcam-type" onchange="onCameraTypeChange()">
+            <select id="fcam-type" onchange="toggleVideoFileField()">
               <option value="Fixed IP Camera">Fixed IP Camera</option>
               <option value="Video File">Video File</option>
               <option value="Web Cam">Web Cam</option>
             </select>
           </div>
-          <div class="form-group mgmt-file-group" id="fcam-file-group" style="display:none">
-            <label>Video File</label>
-            <div class="mgmt-dropzone" id="fcam-dropzone">
-              <input type="file" id="fcam-file" accept="video/*" onchange="onFilePicked(this)" />
-              <div class="mgmt-dropzone-empty" id="fcam-dropzone-empty">
-                <div class="mgmt-dropzone-icon">&#128228;</div>
-                <div class="mgmt-dropzone-text">Drag &amp; drop a video file here</div>
-                <div class="mgmt-dropzone-or">or</div>
-                <button type="button" class="mgmt-browse-btn" onclick="pickVideoFile()">Browse Files</button>
-                <div class="mgmt-dropzone-hint">MP4, MOV, AVI or MKV</div>
-              </div>
-              <div class="mgmt-dropzone-filled" id="fcam-dropzone-filled" style="display:none">
-                <div class="mgmt-file-icon">&#127916;</div>
-                <div class="mgmt-file-info">
-                  <div class="mgmt-file-name" id="fcam-file-name"></div>
-                  <div class="mgmt-file-size" id="fcam-file-size"></div>
-                </div>
-                <button type="button" class="mgmt-file-clear" onclick="clearVideoFile(event)" title="Remove file">&times;</button>
-              </div>
-            </div>
-            <div class="mgmt-file-preview" id="fcam-preview" style="display:none">
-              <video id="fcam-preview-video" controls playsinline></video>
-            </div>
-          </div>
           <div class="form-group">
             <label>Crowd Threshold</label>
             <input type="number" id="fcam-threshold" min="1" placeholder="e.g. 50" />
+          </div>
+          <div class="form-group mgmt-file-group" id="fcam-file-group" style="display: none;">
+            <label>Video File</label>
+            <div class="mgmt-dropzone" id="fcam-dropzone">
+              <input type="file" id="fcam-file" accept="video/*" onchange="handleFilePick(event)" />
+              <div class="mgmt-dropzone-empty" id="fcam-dropzone-empty">
+                <span class="mgmt-dropzone-icon">🎬</span>
+                <span class="mgmt-dropzone-text">Drag &amp; drop a video file here</span>
+                <span class="mgmt-dropzone-hint">MP4, AVI, MOV or MKV — up to 200 MB</span>
+                <span class="mgmt-dropzone-or">or</span>
+                <button type="button" class="mgmt-browse-btn" onclick="getField('fcam-file').click()">Browse Files</button>
+              </div>
+              <div class="mgmt-dropzone-filled" id="fcam-dropzone-filled" style="display: none;">
+                <span class="mgmt-file-icon">🎥</span>
+                <div class="mgmt-file-info">
+                  <span class="mgmt-file-name" id="fcam-file-name"></span>
+                  <span class="mgmt-file-size" id="fcam-file-size"></span>
+                </div>
+                <button type="button" class="mgmt-file-clear" title="Remove file" onclick="clearFilePick(event)">✕</button>
+              </div>
+            </div>
+            <div class="mgmt-file-preview" id="fcam-file-preview" style="display: none;">
+              <video id="fcam-video" controls preload="metadata"></video>
+            </div>
           </div>
         </div>
         <div class="alert" id="add-camera-error"></div>
@@ -174,98 +174,89 @@
       return card;
     }
 
-    var _pickedFile = null;
-    var _pickedResolution = "";
-    var _objectUrl = null;
+    var pickedFile = null;
+    var pickedResolution = "";
 
-    function onCameraTypeChange() {
+    function formatFileSize(bytes) {
+      if (!bytes) return "0 B";
+      var mb = bytes / (1024 * 1024);
+      if (mb >= 1) return mb.toFixed(2) + " MB";
+      return (bytes / 1024).toFixed(0) + " KB";
+    }
+
+    function toggleVideoFileField() {
       var isVideo = getField("fcam-type").value === "Video File";
       getField("fcam-file-group").style.display = isVideo ? "" : "none";
-      if (!isVideo) clearVideoFile();
     }
 
-    function pickVideoFile() {
-      getField("fcam-file").click();
-    }
-
-    function onFilePicked(input) {
-      if (input.files && input.files.length) setVideoFile(input.files[0]);
-    }
-
-    function setVideoFile(file) {
-      _pickedFile = file;
-      var dz = getField("fcam-dropzone");
-      dz.classList.add("has-file");
+    function setFile(file) {
+      if (!file) return;
+      if (file.type && file.type.indexOf("video") === -1) {
+        showAddError(getField("add-camera-error"), "Please select a valid video file.");
+        return;
+      }
+      if (file.size > 200 * 1024 * 1024) {
+        showAddError(getField("add-camera-error"), "File is too large. Maximum size is 200 MB.");
+        return;
+      }
+      pickedFile = file;
+      getField("fcam-dropzone").classList.add("has-file");
       getField("fcam-dropzone-empty").style.display = "none";
-      var filled = getField("fcam-dropzone-filled");
-      filled.style.display = "";
+      getField("fcam-dropzone-filled").style.display = "flex";
       getField("fcam-file-name").textContent = file.name;
-      getField("fcam-file-size").textContent = formatBytes(file.size);
-
-      var preview = getField("fcam-preview");
-      var video = getField("fcam-preview-video");
-      if (_objectUrl) URL.revokeObjectURL(_objectUrl);
-      _objectUrl = URL.createObjectURL(file);
-      video.src = _objectUrl;
-      preview.style.display = "";
+      getField("fcam-file-size").textContent = formatFileSize(file.size);
+      var video = getField("fcam-video");
+      video.src = URL.createObjectURL(file);
+      getField("fcam-file-preview").style.display = "block";
       video.onloadedmetadata = function () {
         if (video.videoWidth && video.videoHeight) {
-          _pickedResolution = video.videoWidth + " x " + video.videoHeight;
+          pickedResolution = video.videoWidth + " x " + video.videoHeight;
         }
       };
-      video.load();
     }
 
-    function clearVideoFile(evt) {
-      if (evt) evt.stopPropagation();
-      _pickedFile = null;
-      _pickedResolution = "";
+    function clearFilePick(event) {
+      if (event) event.stopPropagation();
+      pickedFile = null;
+      pickedResolution = "";
       getField("fcam-file").value = "";
       getField("fcam-dropzone").classList.remove("has-file", "dragover");
-      getField("fcam-dropzone-empty").style.display = "";
+      getField("fcam-dropzone-empty").style.display = "flex";
       getField("fcam-dropzone-filled").style.display = "none";
-      getField("fcam-preview").style.display = "none";
-      getField("fcam-preview-video").removeAttribute("src");
-      if (_objectUrl) {
-        URL.revokeObjectURL(_objectUrl);
-        _objectUrl = null;
-      }
+      getField("fcam-file-preview").style.display = "none";
+      getField("fcam-video").removeAttribute("src");
     }
 
-    function formatBytes(bytes) {
-      if (!bytes) return "0 Bytes";
-      var units = ["Bytes", "KB", "MB", "GB"];
-      var i = Math.floor(Math.log(bytes) / Math.log(1024));
-      return (bytes / Math.pow(1024, i)).toFixed(i ? 1 : 0) + " " + units[i];
+    function handleFilePick(event) {
+      setFile(event.target.files && event.target.files[0]);
     }
 
-    (function setupDropzone() {
-      var dz = getField("fcam-dropzone");
-      if (!dz) return;
-      ["dragenter", "dragover"].forEach(function (e) {
-        dz.addEventListener(e, function (ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          dz.classList.add("dragover");
-        });
+    function handleDrop(event) {
+      event.preventDefault();
+      var zone = getField("fcam-dropzone");
+      zone.classList.remove("dragover");
+      var files = event.dataTransfer && event.dataTransfer.files;
+      if (files && files.length) setFile(files[0]);
+    }
+
+    (function initDropzone() {
+      var zone = getField("fcam-dropzone");
+      zone.addEventListener("dragover", function (event) {
+        event.preventDefault();
+        zone.classList.add("dragover");
       });
-      ["dragleave", "drop"].forEach(function (e) {
-        dz.addEventListener(e, function (ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          dz.classList.remove("dragover");
-        });
+      zone.addEventListener("dragleave", function (event) {
+        if (!zone.contains(event.relatedTarget)) zone.classList.remove("dragover");
       });
-      dz.addEventListener("drop", function (ev) {
-        if (ev.dataTransfer && ev.dataTransfer.files.length) setVideoFile(ev.dataTransfer.files[0]);
-      });
+      zone.addEventListener("drop", handleDrop);
     })();
 
     function openAddCamera() {
       getField("add-camera-modal").classList.add("show");
       getField("add-camera-error").className = "alert";
       getField("add-camera-error").textContent = "";
-      onCameraTypeChange();
+      clearFilePick();
+      toggleVideoFileField();
     }
 
     function closeAddCamera() {
@@ -289,12 +280,12 @@
       if (!location) { showAddError(errorEl, "Location is required."); return false; }
       if (!zone) { showAddError(errorEl, "Zone is required."); return false; }
       if (!threshold || isNaN(threshold) || threshold < 1) { showAddError(errorEl, "Enter a valid crowd threshold."); return false; }
+      if (type === "Video File" && !pickedFile) { showAddError(errorEl, "Please attach a video file."); return false; }
 
       var source = "";
-      var resolution = _pickedResolution || "";
+      var resolution = pickedResolution || "";
       if (type === "Video File") {
-        if (!_pickedFile) { showAddError(errorEl, "Please select a video file."); return false; }
-        source = _pickedFile.name;
+        source = pickedFile.name;
         resolution = resolution || "1920 x 1080";
       } else if (type === "Web Cam") {
         source = "webcam://default";
@@ -309,7 +300,7 @@
 
       if (result.ok) {
         closeAddCamera();
-        clearVideoFile();
+        clearFilePick();
         getField("add-camera-form").reset();
         await renderAll();
       } else {
