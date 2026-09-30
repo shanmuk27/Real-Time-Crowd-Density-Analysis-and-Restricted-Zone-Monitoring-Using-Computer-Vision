@@ -51,6 +51,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# The app renders pages inside a same-origin iframe (#content-frame), so the
+# default DENY would block it. SAMEORIGIN still blocks third-party framing.
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
 ROOT_URLCONF = 'CrowdCountEpics.urls'
 
 TEMPLATES = [
