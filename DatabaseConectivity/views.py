@@ -177,7 +177,7 @@ def UsersList(request):
 
 def ApiCameras(request):
     cameras = list(Camera.objects.all().values(
-        'camera_id', 'name', 'location', 'zone', 'type',
+        'camera_id', 'name', 'location', 'zone', 'type', 'source',
         'resolution', 'threshold', 'status',
     ))
     result = []
@@ -188,6 +188,7 @@ def ApiCameras(request):
             'location': c['location'],
             'zone': c['zone'],
             'type': c['type'],
+            'source': c['source'],
             'resolution': c['resolution'],
             'threshold': c['threshold'],
             'status': c['status'],
@@ -204,6 +205,7 @@ def ApiAddCamera(request):
     location = (data.get('location') or '').strip()
     zone = (data.get('zone') or '').strip()
     cam_type = (data.get('type') or 'Fixed IP Camera').strip()
+    source = (data.get('source') or '').strip()
     resolution = (data.get('resolution') or '1920 × 1080').strip()
     threshold = data.get('threshold') or 50
 
@@ -211,10 +213,12 @@ def ApiAddCamera(request):
         return JsonResponse({'ok': False, 'message': 'Camera ID, name, location, and zone are required.'})
     if Camera.objects.filter(camera_id=camera_id).exists():
         return JsonResponse({'ok': False, 'message': f'A camera with ID {camera_id} already exists.'})
+    if cam_type not in dict(Camera.TYPE_CHOICES):
+        return JsonResponse({'ok': False, 'message': f'Invalid camera type "{cam_type}".'})
 
     Camera.objects.create(
         camera_id=camera_id, name=name, location=location,
-        zone=zone, type=cam_type, resolution=resolution,
+        zone=zone, type=cam_type, source=source, resolution=resolution,
         threshold=int(threshold), status='active',
     )
     return JsonResponse({'ok': True})

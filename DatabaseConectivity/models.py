@@ -26,8 +26,8 @@ class Camera(models.Model):
     ]
     TYPE_CHOICES = [
         ('Fixed IP Camera', 'Fixed IP Camera'),
-        ('PTZ Camera', 'PTZ Camera'),
-        #('360-Degree Camera', '360-Degree Camera'),
+        ('Video File', 'Video File'),
+        ('Web Cam', 'Web Cam'),
     ]
 
     id = models.AutoField(primary_key=True)
@@ -36,6 +36,7 @@ class Camera(models.Model):
     location = models.CharField(max_length=200)
     zone = models.CharField(max_length=100)
     type = models.CharField(max_length=50, choices=TYPE_CHOICES, default='Fixed IP Camera')
+    source = models.CharField(max_length=255, blank=True, default='')
     resolution = models.CharField(max_length=20, default='1920 × 1080')
     threshold = models.IntegerField(default=50)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
