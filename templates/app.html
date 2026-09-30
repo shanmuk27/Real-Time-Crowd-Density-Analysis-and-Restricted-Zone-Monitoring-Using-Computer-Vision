@@ -69,7 +69,7 @@
     </div>
   </div>
 
-  <script src="{% static 'js/demo_data.js' %}"></script>
+  <script src="{% static 'js/api.js' %}"></script>
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
     function navigateTo(el, url) {
@@ -96,11 +96,16 @@
       }
     });
 
-    function renderNotifications() {
-      const list = document.getElementById("notif-list");
+    async function renderNotifications() {
+      var list = document.getElementById("notif-list");
       list.innerHTML = "";
-      DEMO_NOTIFICATIONS.forEach((n) => {
-        const item = document.createElement("div");
+      var notifications = await API.getNotifications();
+      if (!notifications.length) {
+        list.innerHTML = '<div class="notif-item"><span class="notif-item-text">No notifications</span></div>';
+        return;
+      }
+      notifications.forEach(function (n) {
+        var item = document.createElement("div");
         item.className = "notif-item" + (n.unread ? " unread" : "");
         item.innerHTML =
           '<span class="notif-item-icon">' + n.icon + "</span>" +
@@ -122,11 +127,9 @@
         return;
       }
 
-      const demoUser = DEMO_USER_DATA[user.id];
-
       document.getElementById("user-name").textContent = user.name;
       document.getElementById("avatar").textContent = user.name.trim().charAt(0).toUpperCase();
-      document.getElementById("user-id").textContent = demoUser ? demoUser.user_id : user.name;
+      document.getElementById("user-id").textContent = user.name;
       document.getElementById("user-role").textContent = user.role;
       document.getElementById("user-role").classList.add(user.role);
     })();

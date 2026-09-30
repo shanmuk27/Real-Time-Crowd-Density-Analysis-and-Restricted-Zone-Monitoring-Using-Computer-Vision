@@ -8,10 +8,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=16" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
 </head>
-<body class="frame-body">
-  <main class="dashboard dashboard-frame">
+<body>
+  <main class="dashboard">
+    <header class="dashboard-topbar">
+      <div class="brand-logo">
+        <span class="logo-mark">☁️</span>
+        <span>CloudCount</span>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip">
+          <div class="avatar" id="avatar"></div>
+          <div class="user-meta">
+            <strong id="user-name"></strong>
+            <span class="role-badge" id="user-role"></span>
+          </div>
+        </div>
+        <button class="btn btn-logout" id="logout-btn">Sign out</button>
+      </div>
+    </header>
+
     <div class="dashboard-body">
       <div class="dashboard-welcome">
         <h1 id="welcome-title">Welcome back</h1>
@@ -19,82 +36,48 @@
       </div>
 
       <div class="stats-grid">
-        <div class="stat-card crowd-card">
-          <div class="stat-label">Total Crowd</div>
-          <div class="stat-value stat-value-bold" id="stat-instances">0</div>
-          <div class="stat-delta">▲ Updated live</div>
+        <div class="stat-card">
+          <div class="stat-label">Active instances</div>
+          <div class="stat-value" id="stat-instances">0</div>
+          <div class="stat-delta">▲ 12 this month</div>
         </div>
-        <div class="stat-card graph-card" id="monthly-crowd-card" onclick="openCrowdGraph()">
-          <div class="stat-label">Monthly Crowd Analysis</div>
-          <div class="mini-chart" id="mini-chart"></div>
-          <div class="stat-delta">Click to expand ▲</div>
+        <div class="stat-card">
+          <div class="stat-label">Storage used</div>
+          <div class="stat-value" id="stat-storage">0 TB</div>
+          <div class="stat-delta">▲ 8% this month</div>
         </div>
-        <div class="stat-card identified-card">
-          <div class="stat-label">Identified Area</div>
-          <div class="identified-list" id="identified-list"></div>
-          <div class="stat-delta" id="identified-count"></div>
+        <div class="stat-card">
+          <div class="stat-label">Monthly spend</div>
+          <div class="stat-value" id="stat-spend">$0</div>
+          <div class="stat-delta" id="stat-spend-delta">▼ 4% this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Service health</div>
+          <div class="stat-value" id="stat-health">99.9%</div>
+          <div class="stat-delta">All systems operational</div>
         </div>
       </div>
 
-      <div class="total-crowd-card">
-        <div class="total-crowd-header">
-          <div>
-            <div class="stat-label">Total Crowd Live</div>
-            <div class="total-crowd-value" id="live-total-value">0</div>
-          </div>
-          <div class="total-crowd-stats">
-            <div class="tc-stat"><span class="tc-stat-label">Peak</span><span class="tc-stat-val" id="live-peak">0</span></div>
-            <div class="tc-stat"><span class="tc-stat-label">Avg</span><span class="tc-stat-val" id="live-avg">0</span></div>
-            <div class="tc-stat"><span class="tc-stat-label">Cameras</span><span class="tc-stat-val" id="live-cameras">0</span></div>
-          </div>
-        </div>
-        <div class="live-chart" id="live-chart"></div>
-      </div>
-
-      <section class="camera-cards-section">
-        <div class="section-heading">Live Cameras</div>
-        <div class="camera-cards-grid" id="camera-cards-grid"></div>
+      <section class="role-panel">
+        <h3>Your access level: <span class="role-badge" id="panel-role"></span></h3>
+        <p id="panel-description"></p>
+        <div class="role-permissions" id="panel-permissions"></div>
       </section>
 
-      <section class="team-access-card">
-        <div class="team-access-head">
-          <div>
-            <div class="section-heading">Team Access</div>
-            <p class="team-access-sub">Team members assigned by the admin</p>
-          </div>
-          <div class="team-access-count" id="team-active-count"></div>
+      <section class="role-panel mt-4" id="users-panel" hidden>
+        <h3>Team members</h3>
+        <div class="role-permissions">
+          <span class="perm-tag">This panel is only visible to administrators.</span>
         </div>
-        <div class="team-access-list" id="team-access-list"></div>
       </section>
-
-      <div class="graph-modal" id="graph-modal" onclick="if(event.target===this)closeCrowdGraph()">
-        <div class="graph-modal-box">
-          <div class="graph-modal-header">
-            <h3>Monthly Crowd Analysis</h3>
-            <button class="graph-close" onclick="closeCrowdGraph()">✕</button>
-          </div>
-          <div class="large-chart" id="large-chart"></div>
-        </div>
-      </div>
-
-      <div class="graph-modal" id="camera-modal" onclick="if(event.target===this)closeCameraView()">
-        <div class="graph-modal-box">
-          <div class="graph-modal-header">
-            <h3 id="camera-modal-title">Camera View</h3>
-            <button class="graph-close" onclick="closeCameraView()">✕</button>
-          </div>
-          <div class="camera-view-body">
-            <div class="camera-feed" id="camera-feed">
-              <div class="camera-live" id="camera-live"></div>
-              <div class="camera-feed-footer" id="camera-feed-caption"></div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </main>
 
-  <script src="{% static 'js/demo_data.js' %}?v=6"></script>
+<<<<<<< Updated upstream
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script>
+=======
+  <script src="{% static 'js/api.js' %}?v=1"></script>
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
     function renderBars(count, data, showLabels) {
@@ -126,15 +109,15 @@
       });
     }
 
-    function buildMiniChart() {
+    async function buildMiniChart() {
       var mini = document.getElementById("mini-chart");
-      var data = (typeof DEMO_MONTHLY_CROWD !== "undefined") ? DEMO_MONTHLY_CROWD : [];
+      var data = await API.getMonthlyCrowd();
       renderBars(mini, data.slice(0, 14), false);
     }
 
-    function buildLargeChart() {
+    async function buildLargeChart() {
       var large = document.getElementById("large-chart");
-      var data = (typeof DEMO_MONTHLY_CROWD !== "undefined") ? DEMO_MONTHLY_CROWD : [];
+      var data = await API.getMonthlyCrowd();
       renderBars(large, data, true);
     }
 
@@ -147,13 +130,13 @@
       document.getElementById("graph-modal").classList.remove("show");
     }
 
-    function getPersons() {
-      return (typeof DEMO_CAMERA_PERSONS !== "undefined") ? DEMO_CAMERA_PERSONS : [];
+    async function getPersons() {
+      return await API.getPersons();
     }
 
-    function renderIdentified() {
+    async function renderIdentified() {
       var list = document.getElementById("identified-list");
-      var persons = getPersons().slice().sort(function (a, b) {
+      var persons = (await getPersons()).slice().sort(function (a, b) {
         return (a.verified ? 1 : 0) - (b.verified ? 1 : 0);
       });
       list.innerHTML = "";
@@ -207,12 +190,12 @@
       document.getElementById("camera-modal").classList.remove("show");
     }
 
-    function getLiveCrowd() {
-      return (typeof DEMO_LIVE_CROWD !== "undefined") ? DEMO_LIVE_CROWD : [];
+    async function getLiveCrowdData() {
+      return await API.getLiveCrowd();
     }
 
-    function getCameras() {
-      return (typeof DEMO_CAMERAS !== "undefined") ? DEMO_CAMERAS : [];
+    async function getCamerasData() {
+      return await API.getCameras();
     }
 
     function randomCrowd(threshold) {
@@ -249,9 +232,8 @@
       return svg;
     }
 
-    function buildLiveChart() {
+    function buildLiveChartFromData(data) {
       var chart = document.getElementById("live-chart");
-      var data = getLiveCrowd();
       chart.innerHTML = "";
       if (!data || !data.length) return;
 
@@ -369,9 +351,9 @@
       getField("live-cameras").textContent = counts.length;
     }
 
-    function renderCameras() {
+    async function renderCameras() {
       var grid = document.getElementById("camera-cards-grid");
-      var cameras = getCameras();
+      var cameras = await getCamerasData();
       if (!cameras.length) { grid.innerHTML = ""; return; }
 
       var counts = [];
@@ -438,13 +420,13 @@
       refreshLiveTotals(counts);
     }
 
-    function getTeamMembers() {
-      return (typeof DEMO_TEAM_MEMBERS !== "undefined") ? DEMO_TEAM_MEMBERS : [];
+    async function getTeamMembersData() {
+      return await API.getTeamMembers();
     }
 
-    function renderTeam() {
+    async function renderTeam() {
       var list = document.getElementById("team-access-list");
-      var members = getTeamMembers();
+      var members = await getTeamMembersData();
       list.innerHTML = "";
       var active = 0;
 
@@ -475,16 +457,6 @@
         var btn = document.createElement("button");
         btn.className = "team-toggle " + (m.active ? "btn-deactivate" : "btn-activate");
         btn.textContent = m.active ? "Deactivate" : "Activate";
-        btn.onclick = (function (member, stateEl, btnEl) {
-          return function () {
-            member.active = !member.active;
-            stateEl.className = "team-state " + (member.active ? "state-active" : "state-deactivated");
-            stateEl.textContent = member.active ? "● Active" : "● Deactivated";
-            btnEl.className = "team-toggle " + (member.active ? "btn-deactivate" : "btn-activate");
-            btnEl.textContent = member.active ? "Deactivate" : "Activate";
-            updateTeamActiveCount();
-          };
-        })(m, state, btn);
 
         row.appendChild(avatar);
         row.appendChild(info);
@@ -496,19 +468,22 @@
       getField("team-active-count").textContent = active + " of " + members.length + " active";
     }
 
-    function updateTeamActiveCount() {
-      var members = getTeamMembers();
-      var active = 0;
-      members.forEach(function (m) {
-        if (m.active) active++;
-      });
-      getField("team-active-count").textContent = active + " of " + members.length + " active";
-    }
-
+>>>>>>> Stashed changes
     (async () => {
       const user = await Auth.currentUser();
 
-      if (!user) return;
+      if (!user) {
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+        return;
+      }
+
+      const role = user.role;
+      const roleMeta = Auth.ROLES[role];
+
+      getField("user-name").textContent = user.name;
+      getField("avatar").textContent = user.name.trim().charAt(0).toUpperCase();
+      getField("user-role").textContent = role;
+      getField("user-role").classList.add(role);
 
       getField("welcome-title").textContent = "Welcome back, " + user.name.split(" ")[0] + "!";
       getField("welcome-sub").textContent =
@@ -516,19 +491,59 @@
         new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }) +
         ".";
 
-      buildMiniChart();
+<<<<<<< Updated upstream
+      const stats = {
+        instances: { admin: 342, client: 12, developer: 58, analyst: 342 }[role] || 12,
+        storage: { admin: "48.2 TB", client: "3.1 TB", developer: "12.6 TB", analyst: "48.2 TB" }[role],
+        spend: { admin: "$12,480", client: "$1,240", developer: "$4,860", analyst: "$12,480" }[role],
+      };
 
-      renderIdentified();
+      getField("stat-instances").textContent = stats.instances;
+      getField("stat-storage").textContent = stats.storage;
+      getField("stat-spend").textContent = stats.spend;
 
-      buildLiveChart();
+      getField("panel-role").textContent = role;
+      getField("panel-role").classList.add(role);
+      getField("panel-description").textContent =
+        roleMeta.label + " role with the following permissions on the CloudCount dashboard.";
 
-      renderCameras();
+      const perms = getField("panel-permissions");
+      roleMeta.permissions.forEach((p) => {
+        const tag = document.createElement("span");
+        tag.className = "perm-tag";
+        tag.textContent = p;
+        perms.appendChild(tag);
+      });
 
-      renderTeam();
+      if (role === "admin") {
+        getField("users-panel").hidden = false;
+        const users = await Auth.getUsers();
+        const list = getField("users-panel").querySelector(".role-permissions");
+        list.innerHTML = "";
+        users.forEach((u) => {
+          const tag = document.createElement("span");
+          tag.className = "perm-tag";
+          tag.textContent = u.name + " (" + u.email + ") - " + u.role;
+          list.appendChild(tag);
+        });
+      }
+=======
+      await buildMiniChart();
 
-      setInterval(function () {
-        renderCameras();
-      }, 2500);
+      await renderIdentified();
+
+      var liveData = await getLiveCrowdData();
+      buildLiveChartFromData(liveData.live_crowd || []);
+
+      await renderCameras();
+
+      await renderTeam();
+>>>>>>> Stashed changes
+
+      getField("logout-btn").addEventListener("click", async () => {
+        await Auth.logout();
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+      });
     })();
   </script>
 </body>
