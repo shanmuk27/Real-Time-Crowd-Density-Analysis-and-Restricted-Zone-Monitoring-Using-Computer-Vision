@@ -1112,17 +1112,25 @@ body {
 .identified-list {
   flex: 1;
   min-height: 0;
-  max-height: 108px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
   margin: 2px 0 6px;
-  overflow-y: auto;
-  padding-right: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 4px 8px 0;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
 }
 
 .identified-list::-webkit-scrollbar {
-  width: 6px;
+  height: 6px;
+}
+
+.identified-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
 }
 
 .identified-list::-webkit-scrollbar-thumb {
@@ -1138,11 +1146,13 @@ body {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 5px 9px;
+  padding: 7px 12px;
   border-radius: 7px;
   border: 1px solid var(--border);
   background: #f8fafc;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  min-width: 168px;
+  scroll-snap-align: start;
 }
 
 .identified-row.verified {
@@ -1182,6 +1192,15 @@ body {
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  min-width: 0;
+}
+
+.identified-row .view-cam-btn {
+  align-self: flex-start;
+  margin-top: 3px;
+  padding: 4px 10px;
+  font-size: 0.68rem;
+  white-space: nowrap;
 }
 
 .identified-name {
