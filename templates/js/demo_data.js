@@ -88,11 +88,11 @@ const DEMO_LIVE_CROWD = [
 
 const DEMO_CAMERAS = [
   { id: "CAM-001", name: "Entrance Gate A", location: "Main Building - South Entrance", zone: "Public Zone", type: "Fixed IP Camera", resolution: "1920 × 1080", threshold: 80, status: "active" },
-  { id: "CAM-002", name: "Restricted Zone B", location: "Server Room - Floor 2", zone: "Restricted Zone", type: "PTZ Camera", resolution: "2560 × 1440", threshold: 30, status: "danger" },
-  { id: "CAM-003", name: "Parking Area", location: "North Parking Lot", zone: "Public Zone", type: "Fixed IP Camera", resolution: "1280 × 720", threshold: 60, status: "active" },
-  { id: "CAM-004", name: "Main Hall", location: "Auditorium - Floor 1", zone: "Public Zone", type: "360-Degree Camera", resolution: "3840 × 2160", threshold: 100, status: "active" },
+  { id: "CAM-002", name: "Restricted Zone B", location: "Server Room - Floor 2", zone: "Restricted Zone", type: "Web Cam", resolution: "2560 × 1440", threshold: 30, status: "danger" },
+  { id: "CAM-003", name: "Parking Area", location: "North Parking Lot", zone: "Public Zone", type: "Video File", resolution: "1280 × 720", threshold: 60, status: "active" },
+  { id: "CAM-004", name: "Main Hall", location: "Auditorium - Floor 1", zone: "Public Zone", type: "Video File", resolution: "3840 × 2160", threshold: 100, status: "active" },
   { id: "CAM-005", name: "Corridor C", location: "Office Wing - Floor 3", zone: "Staff Zone", type: "Fixed IP Camera", resolution: "1920 × 1080", threshold: 40, status: "active" },
-  { id: "CAM-006", name: "Stairwell D", location: "Emergency Exit - West", zone: "Restricted Zone", type: "Fixed IP Camera", resolution: "1280 × 720", threshold: 25, status: "offline" },
+  { id: "CAM-006", name: "Stairwell D", location: "Emergency Exit - West", zone: "Restricted Zone", type: "Web Cam", resolution: "1280 × 720", threshold: 25, status: "offline" },
 ];
 
 const DEMO_TEAM_MEMBERS = [

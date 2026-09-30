@@ -1790,6 +1790,10 @@ body {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.mgmt-form input[type="file"] {
+  display: none;
+}
+
 .mgmt-form input:focus,
 .mgmt-form select:focus {
   outline: none;
@@ -1919,6 +1923,208 @@ body {
   color: #fff;
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+.mgmt-file-group {
+  grid-column: 1 / -1;
+}
+
+.mgmt-file-group > label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.mgmt-dropzone {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 2px dashed #cbd5e1;
+  border-radius: 14px;
+  background: #f8fafc;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mgmt-dropzone:hover,
+.mgmt-dropzone.dragover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.mgmt-dropzone.dragover .mgmt-dropzone-icon {
+  transform: scale(1.12);
+}
+
+.mgmt-dropzone.has-file {
+  border-style: solid;
+  border-color: var(--success);
+  background: #f0fdf4;
+  box-shadow: none;
+}
+
+.mgmt-dropzone input[type="file"] {
+  display: none;
+}
+
+.mgmt-dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.mgmt-dropzone-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 10px -4px rgba(15, 23, 42, 0.18);
+  font-size: 1.5rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.mgmt-dropzone-text {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.mgmt-dropzone-or {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+.mgmt-browse-btn {
+  display: inline-block;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 9px;
+  background: var(--primary);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.mgmt-browse-btn:hover {
+  background: var(--primary-hover);
+}
+
+.mgmt-browse-btn:active {
+  transform: translateY(1px);
+}
+
+.mgmt-dropzone-hint {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.mgmt-dropzone-filled {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.mgmt-file-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #bbf7d0;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.mgmt-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mgmt-file-name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mgmt-file-size {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--success);
+  line-height: 1.35;
+}
+
+.mgmt-file-clear {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--danger);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mgmt-file-clear:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.mgmt-file-preview {
+  margin-top: 12px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.mgmt-file-preview video {
+  display: block;
+  width: 100%;
+  max-height: 220px;
 }
 
 /* Profile */
