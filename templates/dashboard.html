@@ -73,10 +73,6 @@
     </div>
   </main>
 
-<<<<<<< Updated upstream
-  <script src="{% static 'js/auth.js' %}"></script>
-  <script>
-=======
   <script src="{% static 'js/api.js' %}?v=1"></script>
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
@@ -468,7 +464,6 @@
       getField("team-active-count").textContent = active + " of " + members.length + " active";
     }
 
->>>>>>> Stashed changes
     (async () => {
       const user = await Auth.currentUser();
 
@@ -491,43 +486,6 @@
         new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }) +
         ".";
 
-<<<<<<< Updated upstream
-      const stats = {
-        instances: { admin: 342, client: 12, developer: 58, analyst: 342 }[role] || 12,
-        storage: { admin: "48.2 TB", client: "3.1 TB", developer: "12.6 TB", analyst: "48.2 TB" }[role],
-        spend: { admin: "$12,480", client: "$1,240", developer: "$4,860", analyst: "$12,480" }[role],
-      };
-
-      getField("stat-instances").textContent = stats.instances;
-      getField("stat-storage").textContent = stats.storage;
-      getField("stat-spend").textContent = stats.spend;
-
-      getField("panel-role").textContent = role;
-      getField("panel-role").classList.add(role);
-      getField("panel-description").textContent =
-        roleMeta.label + " role with the following permissions on the CloudCount dashboard.";
-
-      const perms = getField("panel-permissions");
-      roleMeta.permissions.forEach((p) => {
-        const tag = document.createElement("span");
-        tag.className = "perm-tag";
-        tag.textContent = p;
-        perms.appendChild(tag);
-      });
-
-      if (role === "admin") {
-        getField("users-panel").hidden = false;
-        const users = await Auth.getUsers();
-        const list = getField("users-panel").querySelector(".role-permissions");
-        list.innerHTML = "";
-        users.forEach((u) => {
-          const tag = document.createElement("span");
-          tag.className = "perm-tag";
-          tag.textContent = u.name + " (" + u.email + ") - " + u.role;
-          list.appendChild(tag);
-        });
-      }
-=======
       await buildMiniChart();
 
       await renderIdentified();
@@ -538,7 +496,6 @@
       await renderCameras();
 
       await renderTeam();
->>>>>>> Stashed changes
 
       getField("logout-btn").addEventListener("click", async () => {
         await Auth.logout();

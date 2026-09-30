@@ -7,9 +7,6 @@ class Users(models.Model):
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=100)
     role = models.CharField(max_length=50)
-<<<<<<< Updated upstream
-    control = models.CharField(max_length=50)
-=======
     control = models.CharField(max_length=50, default='full')
     photo = models.FileField(upload_to='photos/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -108,4 +105,3 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.message
->>>>>>> Stashed changes

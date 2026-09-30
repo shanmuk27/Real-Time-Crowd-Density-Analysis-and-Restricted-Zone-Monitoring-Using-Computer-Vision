@@ -12,9 +12,6 @@ urlpatterns = [
     path('forgot-password/', views.ForgotPassword, name='forgot-password'),
     path('logout/', views.Logout, name='logout'),
     path('me/', views.Me, name='me'),
-<<<<<<< Updated upstream
-    path('users/', views.Users, name='users'),
-=======
     path('users/', views.UsersList, name='users'),
     path('app/', views.App, name='app'),
     path('camera-management/', views.CameraManagement, name='camera-management'),
@@ -31,5 +28,4 @@ urlpatterns = [
     path('api/persons/', views.ApiCameraPersons, name='api-persons'),
     path('api/notifications/', views.ApiNotifications, name='api-notifications'),
     path('api/team/', views.ApiTeamMembers, name='api-team'),
->>>>>>> Stashed changes
 ]

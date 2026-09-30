@@ -1,9 +1,6 @@
 import json
-<<<<<<< Updated upstream
-=======
 import os
 from datetime import datetime
->>>>>>> Stashed changes
 
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
@@ -36,13 +33,8 @@ def _require_login(request):
 @ensure_csrf_cookie
 def Home(request):
     user_id = request.session.get('user_id')
-<<<<<<< Updated upstream
-    if user_id and users.objects.filter(id=user_id).exists():
-        return redirect('DatabaseConectivity:dashboard')
-=======
     if user_id and Users.objects.filter(id=user_id).exists():
         return redirect('DatabaseConectivity:app')
->>>>>>> Stashed changes
     return redirect('DatabaseConectivity:login')
 
 
@@ -65,8 +57,6 @@ def Login(request):
 
 
 @ensure_csrf_cookie
-<<<<<<< Updated upstream
-=======
 def App(request):
     user = _require_login(request)
     if not user:
@@ -124,7 +114,6 @@ def UpdateProfile(request):
 
 
 @ensure_csrf_cookie
->>>>>>> Stashed changes
 def Register(request):
     if request.method == 'POST':
         data = _json_body(request)
