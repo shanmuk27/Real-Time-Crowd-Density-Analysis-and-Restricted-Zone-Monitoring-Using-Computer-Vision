@@ -260,9 +260,17 @@
       return await API.getCameras();
     }
 
-    function randomCrowd(threshold) {
-      var current = Math.floor(Math.random() * (threshold * 1.6));
-      return Math.min(current + 10, threshold + 30);
+    function liveCountFor(camId, fallback) {
+      var per = window._livePerCamera || {};
+      if (per[camId] != null) return per[camId];
+      return 0;
+    }
+
+    function historyFor(camId, fallback) {
+      var hist = window._liveHistory || {};
+      var series = hist[camId];
+      if (series && series.length) return series;
+      return [0, 0, 0, fallback || 0];
     }
 
     function buildSparkline(points, danger) {
@@ -420,7 +428,7 @@
 
       var counts = [];
       cameras.forEach(function (cam) {
-        var count = randomCrowd(cam.threshold);
+        var count = liveCountFor(cam.id, cam.threshold);
         counts.push({ cam: cam, count: count });
       });
 
@@ -469,7 +477,7 @@
 
         var right = document.createElement("div");
         right.className = "cam-card-chart";
-        right.appendChild(buildSparkline([count * 0.4, count * 0.8, count * 0.6, count], danger));
+        right.appendChild(buildSparkline(historyFor(cam.id, count), danger));
 
         body.appendChild(left);
         body.appendChild(right);
@@ -557,6 +565,8 @@
       await renderIdentified();
 
       var liveData = await getLiveCrowdData();
+      window._livePerCamera = liveData.per_camera || {};
+      window._liveHistory = liveData.history || {};
       buildLiveChartFromData(liveData.live_crowd || []);
 
       await renderCameras();

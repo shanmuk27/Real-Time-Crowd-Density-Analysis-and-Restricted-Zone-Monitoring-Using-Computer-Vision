@@ -105,9 +105,10 @@ class Command(BaseCommand):
         # Live crowd records
         CrowdRecord.objects.all().delete()
         live_total = 0
-        for cam in Camera.objects.all():
-            for hour in range(0, 24, 2):
-                count = (hour * 7 + len(cam.camera_id) * 5) % 85 + 5
+        for idx, cam in enumerate(Camera.objects.all()):
+            for step, hour in enumerate(range(0, 24, 2)):
+                base = (idx * 17 + step * 9) % 70 + 15
+                count = min(base + int(cam.threshold / 6), 150)
                 CrowdRecord.objects.create(camera=cam, count=count)
                 live_total += 1
         self.stdout.write(self.style.SUCCESS(f'Created {live_total} crowd records'))

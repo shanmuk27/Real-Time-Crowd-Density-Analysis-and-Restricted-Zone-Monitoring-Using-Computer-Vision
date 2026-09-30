@@ -234,23 +234,46 @@ def ApiRemoveCamera(request, camera_id):
 
 
 def ApiLiveCrowd(request):
-    records = CrowdRecord.objects.select_related('camera').order_by('timestamp')[:50]
+    latest_records = []
+    for cam in Camera.objects.all():
+        rec = CrowdRecord.objects.filter(camera=cam).order_by('-timestamp').first()
+        if rec:
+            latest_records.append(rec)
+
+    latest_records.sort(key=lambda r: r.timestamp)
     data = []
-    for r in records:
+    for r in latest_records:
         data.append({
             'time': r.timestamp.strftime('%H:%M'),
             'count': r.count,
             'camera': r.camera.camera_id,
         })
-    total = sum(d['count'] for d in data)
-    peak = max((d['count'] for d in data), default=0)
-    avg = round(total / len(data)) if data else 0
+
+    per_camera = {r.camera.camera_id: r.count for r in latest_records}
+    history = {}
+    for cam in Camera.objects.all():
+        series = list(
+            CrowdRecord.objects.filter(camera=cam)
+            .order_by('-timestamp')
+            .values_list('count', flat=True)[:12]
+        )
+        series.reverse()
+        if series:
+            history[cam.camera_id] = series
+
+    counts = [d['count'] for d in data]
+    total = sum(counts)
+    peak = max(counts, default=0)
+    avg = round(total / len(counts)) if counts else 0
+
     return JsonResponse({
         'live_crowd': data,
         'total': total,
         'peak': peak,
         'avg': avg,
         'camera_count': Camera.objects.count(),
+        'per_camera': per_camera,
+        'history': history,
     })
 
 
