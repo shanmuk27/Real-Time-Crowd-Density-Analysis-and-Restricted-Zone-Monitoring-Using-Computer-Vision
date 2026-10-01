@@ -23,6 +23,10 @@
           <span class="nav-icon">📊</span>
           <span class="nav-label">Dashboard</span>
         </a>
+        <a class="nav-item" data-page="live-cameras" onclick="navigateTo(this, '{% url 'DatabaseConectivity:live-cameras' %}')">
+          <span class="nav-icon">📡</span>
+          <span class="nav-label">Live Cameras</span>
+        </a>
         <a class="nav-item" data-page="camera" onclick="navigateTo(this, '{% url 'DatabaseConectivity:camera-management' %}')">
           <span class="nav-icon">📷</span>
           <span class="nav-label">Camera Management</span>

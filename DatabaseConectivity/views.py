@@ -72,6 +72,13 @@ def CameraManagement(request):
 
 
 @ensure_csrf_cookie
+def LiveCameras(request):
+    if not _require_login(request):
+        return redirect('DatabaseConectivity:login')
+    return render(request, 'live-cameras.html')
+
+
+@ensure_csrf_cookie
 def Profile(request):
     user = _require_login(request)
     if not user:
