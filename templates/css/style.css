@@ -544,6 +544,29 @@ body {
   overflow-y: hidden;
   gap: 16px;
   margin-bottom: 28px;
+  padding-bottom: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #eef2f7;
+  scroll-snap-type: x proximity;
+}
+
+.stats-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.stats-grid::-webkit-scrollbar-track {
+  background: #eef2f7;
+  border-radius: 999px;
+}
+
+.stats-grid::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border: 2px solid #eef2f7;
+  border-radius: 999px;
+}
+
+.stats-grid::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .stat-card {
@@ -552,6 +575,7 @@ body {
   padding: 20px;
   flex: 0 0 180px;
   background: #fff;
+  scroll-snap-align: start;
 }
 
 .stat-card .stat-label {
