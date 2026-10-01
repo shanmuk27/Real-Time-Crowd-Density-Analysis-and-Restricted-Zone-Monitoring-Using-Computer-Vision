@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=24" />
 </head>
 <body class="frame-body">
   <main class="dashboard dashboard-frame">
@@ -105,7 +105,7 @@
               </div>
             </div>
             <div class="mgmt-file-preview" id="fcam-file-preview" style="display: none;">
-              <video id="fcam-video" controls preload="metadata"></video>
+              <video id="fcam-video" muted playsinline loop controls preload="metadata"></video>
             </div>
           </div>
         </div>
@@ -176,6 +176,50 @@
 
     var pickedFile = null;
     var pickedResolution = "";
+    var pickedUrl = null;
+
+    var localFeeds = {};
+
+    function keepFeed(cameraId, url, label) {
+      if (!cameraId || !url) return;
+      localFeeds[cameraId] = { url: url, label: label || "local video" };
+    }
+
+    function getFeed(cameraId) {
+      return localFeeds[cameraId] || null;
+    }
+
+    function dropFeed(cameraId) {
+      var feed = localFeeds[cameraId];
+      if (feed && feed.url && feed.url.indexOf("blob:") === 0) {
+        URL.revokeObjectURL(feed.url);
+      }
+      delete localFeeds[cameraId];
+    }
+
+    function attachFeedVideo(container, cameraId) {
+      var feed = getFeed(cameraId);
+      if (!feed) return false;
+
+      var video = document.createElement("video");
+      video.className = "mgmt-feed-video";
+      video.src = feed.url;
+      video.muted = true;
+      video.playsInline = true;
+      video.loop = true;
+      video.controls = true;
+      video.preload = "auto";
+      video.setAttribute("muted", "");
+
+      var play = video.play();
+      if (play && play.catch) {
+        play.catch(function () { video.controls = true; });
+      }
+
+      container.innerHTML = "";
+      container.appendChild(video);
+      return true;
+    }
 
     function formatFileSize(bytes) {
       if (!bytes) return "0 B";
@@ -205,9 +249,12 @@
       getField("fcam-dropzone-filled").style.display = "flex";
       getField("fcam-file-name").textContent = file.name;
       getField("fcam-file-size").textContent = formatFileSize(file.size);
+      if (pickedUrl) URL.revokeObjectURL(pickedUrl);
+      pickedUrl = URL.createObjectURL(file);
       var video = getField("fcam-video");
-      video.src = URL.createObjectURL(file);
+      video.src = pickedUrl;
       getField("fcam-file-preview").style.display = "block";
+      video.play().catch(function () {});
       video.onloadedmetadata = function () {
         if (video.videoWidth && video.videoHeight) {
           pickedResolution = video.videoWidth + " x " + video.videoHeight;
@@ -219,6 +266,10 @@
       if (event) event.stopPropagation();
       pickedFile = null;
       pickedResolution = "";
+      if (pickedUrl) {
+        URL.revokeObjectURL(pickedUrl);
+        pickedUrl = null;
+      }
       getField("fcam-file").value = "";
       getField("fcam-dropzone").classList.remove("has-file", "dragover");
       getField("fcam-dropzone-empty").style.display = "flex";
@@ -299,6 +350,10 @@
       });
 
       if (result.ok) {
+        var registeredId = result.camera && result.camera.id ? result.camera.id : id;
+        if (type === "Video File" && pickedUrl) {
+          keepFeed(registeredId, pickedUrl, pickedFile.name);
+        }
         closeAddCamera();
         clearFilePick();
         getField("add-camera-form").reset();
@@ -336,6 +391,7 @@
 
       var cameraId = getField("rm-cam-id").textContent;
       var result = await API.removeCamera(cameraId);
+      if (result.ok) dropFeed(cameraId);
 
       if (result.ok) {
         closeRemoveCamera();
@@ -420,6 +476,16 @@
       head.appendChild(st);
       head.appendChild(rm);
 
+      var feed = document.createElement("div");
+      feed.className = "mgmt-feed";
+      if (attachFeedVideo(feed, cam.id)) {
+        feed.classList.add("has-video");
+        var tag = document.createElement("span");
+        tag.className = "mgmt-feed-tag";
+        tag.textContent = "Local video - no processing";
+        feed.appendChild(tag);
+      }
+
       var body = document.createElement("div");
       body.className = "mgmt-card-meta";
 
@@ -450,6 +516,7 @@
       });
 
       card.appendChild(head);
+      card.appendChild(feed);
       card.appendChild(body);
       return card;
     }
