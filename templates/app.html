@@ -4,24 +4,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CloudCount</title>
+  <title>CrowdCount</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=4" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=30" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 </head>
 <body class="app-body">
   <div class="app-layout">
     <aside class="sidebar">
       <div class="sidebar-brand">
         <span class="logo-mark">☁️</span>
-        <span class="brand-text">CloudCount</span>
+        <span class="brand-text">CrowdCount</span>
       </div>
 
       <nav class="sidebar-nav">
         <a class="nav-item active" data-page="dashboard" onclick="navigateTo(this, '{% url 'DatabaseConectivity:dashboard' %}')">
           <span class="nav-icon">📊</span>
           <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-item" data-page="live-cameras" onclick="navigateTo(this, '{% url 'DatabaseConectivity:live-cameras' %}')">
+          <span class="nav-icon">📡</span>
+          <span class="nav-label">Live Cameras</span>
         </a>
         <a class="nav-item" data-page="camera" onclick="navigateTo(this, '{% url 'DatabaseConectivity:camera-management' %}')">
           <span class="nav-icon">📷</span>
@@ -65,11 +72,12 @@
         </div>
       </header>
 
-      <iframe id="content-frame" class="content-frame" src="{% url 'DatabaseConectivity:dashboard' %}"></iframe>
+      <iframe id="content-frame" class="content-frame" allow="camera" src="{% url 'DatabaseConectivity:dashboard' %}"></iframe>
     </div>
   </div>
 
-  <script src="{% static 'js/demo_data.js' %}"></script>
+<script src="{% static 'js/capture.js' %}?v=5"></script>
+<script src="{% static 'js/api.js' %}?v=3"></script>
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
     function navigateTo(el, url) {
@@ -77,8 +85,26 @@
         item.classList.remove("active");
       });
       el.classList.add("active");
-      document.getElementById("content-frame").src = url;
+      // Forget a pending camera hand-off when leaving Live Cameras, so a
+      // stale id cannot pop a modal open on some later visit.
+      if (el.getAttribute("data-page") !== "live-cameras") window.__pendingCameraId = null;
+      // Bust the frame's HTML cache so a page always runs its current script.
+      // Without this a reload can leave the iframe executing an older build.
+      var frame = document.getElementById("content-frame");
+      frame.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "_=" + Date.now();
     }
+
+    // Child pages can ask the shell to switch sections, e.g. a dashboard
+    // camera card clicking through to the same feed on Live Cameras.
+    window.addEventListener("message", function (msg) {
+      if (msg.origin !== window.location.origin) return;
+      var d = msg.data;
+      if (!d || d.type !== "nav:navigate" || !d.page) return;
+      var item = document.querySelector('.nav-item[data-page="' + d.page + '"]');
+      if (!item) return;
+      window.__pendingCameraId = d.cameraId || null;
+      item.click();
+    });
 
     async function handleLogout() {
       await Auth.logout();
@@ -96,11 +122,19 @@
       }
     });
 
-    function renderNotifications() {
-      const list = document.getElementById("notif-list");
+    async function renderNotifications() {
+      var list = document.getElementById("notif-list");
       list.innerHTML = "";
-      DEMO_NOTIFICATIONS.forEach((n) => {
-        const item = document.createElement("div");
+      var notifications = await API.getNotifications();
+      var unread = notifications.filter(function (n) { return n.unread; }).length;
+      document.getElementById("notif-badge").textContent = unread;
+      document.getElementById("notif-badge").style.display = unread ? "" : "none";
+      if (!notifications.length) {
+        list.innerHTML = '<div class="notif-item"><span class="notif-item-text">No notifications</span></div>';
+        return;
+      }
+      notifications.forEach(function (n) {
+        var item = document.createElement("div");
         item.className = "notif-item" + (n.unread ? " unread" : "");
         item.innerHTML =
           '<span class="notif-item-icon">' + n.icon + "</span>" +
@@ -113,6 +147,7 @@
     }
 
     renderNotifications();
+    setInterval(renderNotifications, 15000);
 
     (async () => {
       const user = await Auth.currentUser();
@@ -122,14 +157,14 @@
         return;
       }
 
-      const demoUser = DEMO_USER_DATA[user.id];
-
       document.getElementById("user-name").textContent = user.name;
       document.getElementById("avatar").textContent = user.name.trim().charAt(0).toUpperCase();
-      document.getElementById("user-id").textContent = demoUser ? demoUser.user_id : user.name;
+      document.getElementById("user-id").textContent = user.name;
       document.getElementById("user-role").textContent = user.role;
       document.getElementById("user-role").classList.add(user.role);
     })();
+
+    window.Capture.registerHost();
   </script>
 </body>
 </html>

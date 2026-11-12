@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -48,8 +49,12 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    #'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# The app renders pages inside a same-origin iframe (#content-frame), so the
+# default DENY would block it. SAMEORIGIN still blocks third-party framing.
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 ROOT_URLCONF = 'CrowdCountEpics.urls'
 
@@ -81,7 +86,9 @@ WSGI_APPLICATION = 'CrowdCountEpics.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        # DJANGO_DB_NAME lets the browser test harness point at a throwaway
+        # copy so E2E runs can never create or delete records in the dev DB.
+        'NAME': Path(os.environ.get('DJANGO_DB_NAME') or (BASE_DIR / 'db.sqlite3')),
     }
 }
 
@@ -124,3 +131,45 @@ STATIC_URL = 'static/'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+# Vision-engine integration. Override these with environment variables when
+# deploying model files outside this repository. CUDA can be selected with
+# VISION_ENGINE_DEVICE=0 on a CUDA-enabled server.
+CROWD_ENGINE_WEIGHTS = Path(os.environ.get('CROWD_ENGINE_WEIGHTS') or (BASE_DIR / 'runs' / 'crowd_train' / 'weights' / 'best.pt'))
+FACE_ENGINE_WEIGHTS = Path(os.environ.get('FACE_ENGINE_WEIGHTS') or (BASE_DIR / 'runs' / 'face_detection' / 'face_yolo6n' / 'weights' / 'best.pt'))
+CROWD_ENGINE_IMAGE_SIZE = int(os.environ.get('CROWD_ENGINE_IMAGE_SIZE', '1024'))
+# Video frames are cleaned in the Django engine before crowd or face inference.
+# The bilateral filter runs only when the measured high-frequency residual
+# indicates visible compression or low-light sensor noise.
+VISION_DENOISE_ENABLED = os.environ.get('VISION_DENOISE_ENABLED', 'true').lower() in {'1', 'true', 'yes', 'on'}
+VISION_DENOISE_MIN_RESIDUAL = float(os.environ.get('VISION_DENOISE_MIN_RESIDUAL', '4.0'))
+VISION_DENOISE_DIAMETER = int(os.environ.get('VISION_DENOISE_DIAMETER', '5'))
+VISION_DENOISE_COLOR_SIGMA = float(os.environ.get('VISION_DENOISE_COLOR_SIGMA', '25'))
+VISION_DENOISE_SPACE_SIGMA = float(os.environ.get('VISION_DENOISE_SPACE_SIGMA', '25'))
+# Expand dark/washed-out luminance only when sampling shows it is needed.
+# These settings are intentionally mild to protect detector and face features.
+VISION_CLARITY_ENABLED = os.environ.get('VISION_CLARITY_ENABLED', 'true').lower() in {'1', 'true', 'yes', 'on'}
+VISION_CLARITY_DARK_MEAN = float(os.environ.get('VISION_CLARITY_DARK_MEAN', '65'))
+VISION_CLARITY_MIN_RANGE = float(os.environ.get('VISION_CLARITY_MIN_RANGE', '45'))
+VISION_CLARITY_CLAHE_CLIP = float(os.environ.get('VISION_CLARITY_CLAHE_CLIP', '1.5'))
+# On truly dark video, lift shadow luminance after local contrast recovery.
+# Values below 1 brighten shadows; 0.72 is deliberately conservative.
+VISION_SHADOW_LIFT_MEAN = float(os.environ.get('VISION_SHADOW_LIFT_MEAN', '65'))
+VISION_SHADOW_LIFT_GAMMA = float(os.environ.get('VISION_SHADOW_LIFT_GAMMA', '0.72'))
+# ``auto`` selects CUDA when it is available and otherwise uses the CPU.
+VISION_ENGINE_DEVICE = os.environ.get('VISION_ENGINE_DEVICE', 'auto')
+FACE_AUTH_IMAGE_SIZE = int(os.environ.get('FACE_AUTH_IMAGE_SIZE', '512'))
+# Authentication is sampled rather than inferred on every video frame. This
+# keeps the CPU-only face detector responsive while label caching preserves a
+# stable live result between samples.
+FACE_AUTH_FRAME_INTERVAL_SECONDS = float(os.environ.get('FACE_AUTH_FRAME_INTERVAL_SECONDS', '1.25'))
+FACE_AUTH_VERIFY_CACHE_SECONDS = float(os.environ.get('FACE_AUTH_VERIFY_CACHE_SECONDS', '5.0'))
+FACE_AUTH_MAX_VERIFY_FACES = int(os.environ.get('FACE_AUTH_MAX_VERIFY_FACES', '4'))
+FACE_AUTH_MIN_FACE_SIZE = int(os.environ.get('FACE_AUTH_MIN_FACE_SIZE', '64'))
+FACE_AUTH_MIN_BRIGHTNESS = float(os.environ.get('FACE_AUTH_MIN_BRIGHTNESS', '35'))
+FACE_AUTH_MAX_BRIGHTNESS = float(os.environ.get('FACE_AUTH_MAX_BRIGHTNESS', '220'))
+FACE_AUTH_MIN_BLUR_SCORE = float(os.environ.get('FACE_AUTH_MIN_BLUR_SCORE', '45'))
+# Small detector + MobileFaceNet recognition, suitable for CPU live feeds.
+FACE_RECOGNITION_MODEL = os.environ.get('FACE_RECOGNITION_MODEL', 'buffalo_sc')

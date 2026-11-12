@@ -33,6 +33,54 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #eef2f7;
+}
+
+/* Slim themed scrollbars. Every scrollable area gets the same treatment so
+   no default grey Windows bar shows up inside the app. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #eef2f7;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #eef2f7;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border: 2px solid #eef2f7;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+*::-webkit-scrollbar-corner {
+  background: #eef2f7;
+}
+
+/* The dashboard is a light page, so its own scrollbar needs a light track
+   rather than inheriting the dark app-shell colours. */
+.dashboard ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.dashboard ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border: 2px solid #f1f5f9;
+}
+
+.dashboard ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .auth-page {
@@ -537,18 +585,108 @@ body {
   font-size: 0.92rem;
 }
 
-.stats-grid {
+.dashboard-welcome .engine-status {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.engine-status-ready { color: var(--success) !important; }
+.engine-status-warning { color: var(--danger) !important; }
+.engine-status-waiting { color: var(--text-muted) !important; }
+
+.face-candidate-help {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 2px 0 16px;
+}
+
+.face-candidate-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  max-height: 430px;
+  overflow-y: auto;
+}
+
+.face-candidate-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #f8fafc;
+}
+
+.face-candidate-card strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.face-candidate-state {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.face-candidate-card label {
+  color: var(--text-muted);
+  display: grid;
+  font-size: 0.74rem;
+  font-weight: 600;
+  gap: 5px;
+}
+
+.face-candidate-card input {
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.face-candidate-card img {
+  aspect-ratio: 1;
+  width: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+#face-candidate-modal {
+  z-index: 2100;
+}
+
+.face-folder-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.face-folder-picker span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.stats-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  /* Stretch every card in a row to the same height. */
+  align-items: stretch;
   gap: 16px;
   margin-bottom: 28px;
+  /* A wrapped dashboard grid should never expose a horizontal track. */
+  overflow-x: hidden;
 }
 
 .stat-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
+  /* Shrink-to-fit instead of a fixed 180px so cards share the row and the
+     identified card can grow to fit its rows without a horizontal scrollbar. */
+  flex: 1 1 180px;
+  min-width: 0;
   background: #fff;
+  scroll-snap-align: start;
 }
 
 .stat-card .stat-label {
@@ -709,7 +847,52 @@ body {
   border-radius: var(--radius);
   padding: 16px;
   background: #fff;
+  cursor: pointer;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+/* Small live frame embedded in each dashboard camera card. Polls the same
+   backend frame endpoint as Live Cameras; shows a placeholder until a feed
+   arrives, and the whole card links through to that camera. */
+.cam-card-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.cam-card-frame-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 1;
+  display: none;
+}
+
+.cam-card-frame.has-signal .cam-card-frame-img {
+  display: block;
+}
+
+.cam-card-frame-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  z-index: 0;
+}
+
+.cam-card-frame.has-signal .cam-card-frame-placeholder {
+  display: none;
 }
 
 .cam-card:hover {
@@ -974,6 +1157,14 @@ body {
   padding-top: 8px;
 }
 
+.chart-empty {
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: auto 0;
+  text-align: center;
+}
+
 .mini-chart .bar-col {
   flex: 1;
   display: flex;
@@ -1107,31 +1298,46 @@ body {
 .identified-card {
   display: flex;
   flex-direction: column;
+  /* Wide enough that the full name, badge and View camera button sit on one
+     line without the row wrapping or clipping. */
+  flex: 1 1 320px;
+  max-width: 100%;
 }
 
 .identified-list {
   flex: 1;
   min-height: 0;
-  max-height: 108px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin: 2px 0 6px;
+  /* Keep a long detected-person list inside its card. */
+  max-height: 258px;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 4px;
+  scrollbar-gutter: stable;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
 }
 
 .identified-list::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+}
+
+.identified-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
 }
 
 .identified-list::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 6px;
+  background: linear-gradient(180deg, #94a3b8, #64748b);
+  border: 2px solid #f1f5f9;
+  border-radius: 999px;
 }
 
 .identified-list::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: linear-gradient(180deg, #64748b, #475569);
 }
 
 .identified-row {
@@ -1173,6 +1379,20 @@ body {
   flex-shrink: 0;
 }
 
+.identified-avatar.face-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fee2e2;
+}
+
+.identified-avatar.face-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .identified-row.unverified .identified-avatar {
   background: var(--danger);
 }
@@ -1182,6 +1402,15 @@ body {
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  min-width: 0;
+}
+
+.identified-row .view-cam-btn {
+  align-self: flex-start;
+  margin-top: 3px;
+  padding: 4px 10px;
+  font-size: 0.68rem;
+  white-space: nowrap;
 }
 
 .identified-name {
@@ -1226,6 +1455,275 @@ body {
   background: #b91c1c;
 }
 
+.dismiss-unverified-btn {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 3px 8px;
+  border: 1px solid #fecaca;
+  border-radius: 5px;
+  background: #fff;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.mgmt-edit-btn {
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mgmt-edit-btn:hover { background: #dbeafe; }
+
+/* Dashboard responsive layout
+   The dashboard is also rendered inside the application frame, so these
+   rules keep every panel usable when the available frame is narrow. */
+@media (max-width: 900px) {
+  .dashboard-body {
+    padding: 24px;
+  }
+
+  .stats-grid {
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    flex-basis: 200px;
+  }
+
+  .identified-card {
+    flex-basis: 280px;
+  }
+
+  .camera-cards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-topbar {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .dashboard-topbar .brand-logo {
+    font-size: 1rem;
+  }
+
+  .topbar-right {
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .user-chip {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .user-chip .avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .user-chip .user-meta {
+    min-width: 0;
+  }
+
+  .user-chip .user-meta strong,
+  .user-chip .user-meta span {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .btn-logout {
+    padding: 8px 12px;
+  }
+
+  .dashboard-body {
+    padding: 16px;
+  }
+
+  .dashboard-welcome {
+    margin-bottom: 20px;
+  }
+
+  .dashboard-welcome h1 {
+    font-size: 1.3rem;
+  }
+
+  .stats-grid {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    flex-basis: calc(50% - 6px);
+    padding: 16px;
+  }
+
+  .identified-card {
+    flex-basis: 100%;
+  }
+
+  .identified-list {
+    max-height: 230px;
+  }
+
+  .total-crowd-card,
+  .team-access-card {
+    padding: 18px 16px;
+    margin-bottom: 20px;
+  }
+
+  .total-crowd-header {
+    margin-bottom: 14px;
+  }
+
+  .total-crowd-stats {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .tc-stat {
+    min-width: 0;
+  }
+
+  .live-chart {
+    height: 170px;
+  }
+
+  .camera-cards-section {
+    margin-bottom: 20px;
+  }
+
+  .camera-cards-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .cam-card-head {
+    flex-wrap: wrap;
+  }
+
+  .cam-card-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .team-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .team-toggle {
+    margin-left: auto;
+  }
+
+  .graph-modal {
+    padding: 12px;
+  }
+
+  .graph-modal-box {
+    height: min(78vh, 620px);
+    border-radius: 12px;
+  }
+
+  .graph-modal-header {
+    padding: 14px 16px;
+  }
+
+  .graph-modal-header h3 {
+    font-size: 1rem;
+  }
+
+  .large-chart {
+    gap: 4px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .topbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .user-chip .user-meta strong,
+  .user-chip .user-meta span {
+    max-width: 170px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stat-card,
+  .identified-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .identified-row {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .identified-info {
+    overflow: hidden;
+  }
+
+  .identified-row .view-cam-btn {
+    max-width: 100%;
+  }
+
+  .total-crowd-header {
+    flex-direction: column;
+  }
+
+  .total-crowd-stats {
+    justify-content: flex-start;
+  }
+
+  .live-chart {
+    height: 145px;
+  }
+
+  .cam-card-body {
+    gap: 8px;
+  }
+
+  .cam-card-chart {
+    width: 88px;
+  }
+
+  .team-state {
+    margin-left: 50px;
+  }
+
+  .team-toggle {
+    margin-left: auto;
+  }
+}
+
 .camera-view-body {
   flex: 1;
   display: flex;
@@ -1261,6 +1759,139 @@ body {
     linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
+}
+
+.stored-face-frame {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: min(320px, 76vw);
+  max-height: 360px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 3px solid #ef4444;
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Relayed camera frames */
+.live-cam-frame-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 1;
+}
+
+.camera-live.is-offline .live-cam-frame-img {
+  display: none;
+}
+
+.live-cam-feed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(37, 99, 235, 0.25), transparent 55%),
+    #0f172a;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.live-cam-feed::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.live-cam-feed-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.live-cam-feed-placeholder:empty {
+  display: none;
+}
+
+.live-cam-feed.is-offline {
+  background: #0b1220;
+}
+
+.live-cam-feed-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  background: rgba(15, 23, 42, 0.78);
+  color: #e2e8f0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+}
+
+.live-cam-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.live-cam-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.live-cam-card.is-offline {
+  opacity: 0.72;
+}
+
+.live-cam-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.live-cam-name-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.live-cam-count {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.live-cam-empty {
+  grid-column: 1 / -1;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .cam-alert {
@@ -1305,6 +1936,14 @@ body {
   font-size: 0.78rem;
   color: var(--success);
   margin-top: 6px;
+}
+
+.stat-card .stat-delta.metric-detail {
+  color: var(--text-muted);
+}
+
+.stat-card .stat-delta.metric-warning {
+  color: #dc2626;
 }
 
 .role-panel {
@@ -1444,6 +2083,7 @@ body {
 
 .main-area {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1646,11 +2286,11 @@ body {
   }
 
   .dashboard-body {
-    padding: 20px;
+    padding: 16px;
   }
 
   .dashboard-topbar {
-    padding: 16px 20px;
+    padding: 14px 16px;
     flex-wrap: wrap;
     gap: 12px;
   }
@@ -1761,6 +2401,44 @@ body {
   min-height: auto;
 }
 
+/* Keep Add Camera usable when its conditional folder/video controls make the
+   form taller than the viewport. The fields scroll, but the action buttons
+   stay on screen. */
+#add-camera-modal .mgmt-modal-box {
+  height: min(86vh, 760px);
+  max-height: 86vh;
+}
+
+#add-camera-modal .mgmt-form {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+#add-camera-modal .mgmt-form-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 24px 8px;
+  scrollbar-gutter: stable;
+}
+
+#add-camera-modal #add-camera-error {
+  flex: 0 0 auto;
+  margin: 0 24px;
+}
+
+#add-camera-modal .mgmt-form-actions {
+  flex: 0 0 auto;
+  margin: 10px 0 0;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: #fff;
+}
+
 .mgmt-form {
   padding: 24px;
   overflow-y: auto;
@@ -1788,6 +2466,10 @@ body {
   color: var(--text);
   background: #fff;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mgmt-form input[type="file"] {
+  display: none;
 }
 
 .mgmt-form input:focus,
@@ -1886,6 +2568,95 @@ body {
   line-height: 1.5;
 }
 
+/* The host application uses a sidebar on wide displays.  Convert it into a
+   compact horizontal navigation bar before it can squeeze framed pages. */
+@media (max-width: 768px) {
+  .app-layout {
+    height: 100dvh;
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    height: 60px;
+    min-height: 60px;
+    flex-direction: row;
+    align-items: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .sidebar-brand,
+  .sidebar-bottom {
+    display: none;
+  }
+
+  .sidebar-nav {
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-around;
+    padding: 0;
+    gap: 0;
+  }
+
+  .nav-item {
+    flex: 1 0 auto;
+    justify-content: center;
+    padding: 10px 14px;
+  }
+
+  .nav-item .nav-icon {
+    width: auto;
+  }
+
+  .main-area {
+    min-height: 0;
+  }
+
+  .main-area .dashboard-topbar.topbar-nav {
+    padding: 10px 16px;
+  }
+
+  .topbar-nav .topbar-right {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .sidebar {
+    height: 54px;
+    min-height: 54px;
+  }
+
+  .nav-item {
+    min-width: 54px;
+    padding: 8px 10px;
+  }
+
+  .nav-item .nav-label {
+    display: none;
+  }
+
+  .main-area .dashboard-topbar.topbar-nav {
+    padding: 8px 12px;
+  }
+
+  .main-area .dashboard-topbar .user-id-text {
+    display: none;
+  }
+
+  .notif-dropdown {
+    position: fixed;
+    top: 66px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: min(400px, calc(100dvh - 84px));
+  }
+}
+
 .mgmt-reverify {
   display: flex;
   align-items: flex-start;
@@ -1919,6 +2690,260 @@ body {
   color: #fff;
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+.mgmt-file-group {
+  grid-column: 1 / -1;
+}
+
+.mgmt-file-group > label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.mgmt-dropzone {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 2px dashed #cbd5e1;
+  border-radius: 14px;
+  background: #f8fafc;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mgmt-dropzone:hover,
+.mgmt-dropzone.dragover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.mgmt-dropzone.dragover .mgmt-dropzone-icon {
+  transform: scale(1.12);
+}
+
+.mgmt-dropzone.has-file {
+  border-style: solid;
+  border-color: var(--success);
+  background: #f0fdf4;
+  box-shadow: none;
+}
+
+.mgmt-dropzone input[type="file"] {
+  display: none;
+}
+
+.mgmt-dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 28px;
+  text-align: center;
+}
+
+.mgmt-dropzone-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 10px -4px rgba(15, 23, 42, 0.18);
+  font-size: 1.5rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.mgmt-dropzone-text {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.mgmt-dropzone-hint {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--border);
+}
+
+.mgmt-dropzone-or {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 220px;
+  margin: 6px 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mgmt-dropzone-or::before,
+.mgmt-dropzone-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.mgmt-browse-btn {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 9px;
+  background: var(--primary);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
+}
+
+.mgmt-browse-btn:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 6px 14px -6px rgba(37, 99, 235, 0.6);
+}
+
+.mgmt-browse-btn:active {
+  transform: translateY(1px);
+}
+
+.mgmt-dropzone-filled {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.mgmt-file-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #bbf7d0;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.mgmt-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mgmt-file-name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mgmt-file-size {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--success);
+  line-height: 1.35;
+}
+
+.mgmt-file-clear {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--danger);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mgmt-file-clear:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.mgmt-file-preview {
+  margin-top: 12px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.mgmt-file-preview video {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+}
+
+.mgmt-feed {
+  display: none;
+  margin: 10px 0 12px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0f172a;
+  position: relative;
+}
+
+.mgmt-feed.has-video {
+  display: block;
+}
+
+.mgmt-feed-video {
+  display: block;
+  width: 100%;
+  max-height: 200px;
+  background: #0f172a;
+}
+
+.mgmt-feed-tag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  pointer-events: none;
 }
 
 /* Profile */

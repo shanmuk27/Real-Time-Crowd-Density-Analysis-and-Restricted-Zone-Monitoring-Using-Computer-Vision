@@ -4,14 +4,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard | CloudCount</title>
+  <title>Dashboard | CrowdCount</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=16" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=32" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 </head>
 <body class="frame-body">
   <main class="dashboard dashboard-frame">
+    <header class="dashboard-topbar">
+      <div class="brand-logo">
+        <span class="logo-mark">☁️</span>
+        <span>CrowdCount</span>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip">
+          <div class="avatar" id="avatar"></div>
+          <div class="user-meta">
+            <strong id="user-name"></strong>
+            <span class="role-badge" id="user-role"></span>
+          </div>
+        </div>
+        <button class="btn btn-logout" id="logout-btn">Sign out</button>
+      </div>
+    </header>
+
     <div class="dashboard-body">
       <div class="dashboard-welcome">
         <h1 id="welcome-title">Welcome back</h1>
@@ -19,15 +37,20 @@
       </div>
 
       <div class="stats-grid">
-        <div class="stat-card crowd-card">
-          <div class="stat-label">Total Crowd</div>
-          <div class="stat-value stat-value-bold" id="stat-instances">0</div>
-          <div class="stat-delta">▲ Updated live</div>
-        </div>
         <div class="stat-card graph-card" id="monthly-crowd-card" onclick="openCrowdGraph()">
           <div class="stat-label">Monthly Crowd Analysis</div>
           <div class="mini-chart" id="mini-chart"></div>
           <div class="stat-delta">Click to expand ▲</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Database storage</div>
+          <div class="stat-value" id="stat-storage">—</div>
+          <div class="stat-delta metric-detail" id="stat-storage-detail">Current database size</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Camera feed health</div>
+          <div class="stat-value" id="stat-health">—</div>
+          <div class="stat-delta metric-detail" id="stat-health-detail">Checking live feeds</div>
         </div>
         <div class="stat-card identified-card">
           <div class="stat-label">Identified Area</div>
@@ -91,14 +114,30 @@
           </div>
         </div>
       </div>
+
+      <section class="role-panel">
+        <h3>Your access level: <span class="role-badge" id="panel-role"></span></h3>
+        <p id="panel-description"></p>
+        <div class="role-permissions" id="panel-permissions"></div>
+      </section>
+
+      <section class="role-panel mt-4" id="users-panel" hidden>
+        <h3>Team members</h3>
+        <div class="role-permissions">
+          <span class="perm-tag">This panel is only visible to administrators.</span>
+        </div>
+      </section>
     </div>
   </main>
 
-  <script src="{% static 'js/demo_data.js' %}?v=6"></script>
+  <script src="{% static 'js/api.js' %}?v=6"></script>
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
     function renderBars(count, data, showLabels) {
-      if (!data || !data.length) return;
+      if (!data || !data.length) {
+        count.innerHTML = '<p class="chart-empty">No crowd data recorded for this month yet.</p>';
+        return;
+      }
       var max = 0;
       data.forEach(function (d) {
         if (d.count > max) max = d.count;
@@ -126,15 +165,15 @@
       });
     }
 
-    function buildMiniChart() {
+    async function buildMiniChart() {
       var mini = document.getElementById("mini-chart");
-      var data = (typeof DEMO_MONTHLY_CROWD !== "undefined") ? DEMO_MONTHLY_CROWD : [];
+      var data = await API.getMonthlyCrowd();
       renderBars(mini, data.slice(0, 14), false);
     }
 
-    function buildLargeChart() {
+    async function buildLargeChart() {
       var large = document.getElementById("large-chart");
-      var data = (typeof DEMO_MONTHLY_CROWD !== "undefined") ? DEMO_MONTHLY_CROWD : [];
+      var data = await API.getMonthlyCrowd();
       renderBars(large, data, true);
     }
 
@@ -147,19 +186,32 @@
       document.getElementById("graph-modal").classList.remove("show");
     }
 
-    function getPersons() {
-      return (typeof DEMO_CAMERA_PERSONS !== "undefined") ? DEMO_CAMERA_PERSONS : [];
+    async function getPersons() {
+      return await API.getPersons();
     }
 
-    function renderIdentified() {
+    var dashboardUser = null;
+
+    // Keep the dashboard action compatible with an already-cached API helper
+    // during a rolling browser refresh.
+    if (typeof API.removeUnverifiedPerson !== "function") {
+      API.removeUnverifiedPerson = function (personId) {
+        return API.post("/api/persons/" + encodeURIComponent(personId) + "/remove/", {});
+      };
+    }
+
+    async function renderIdentified() {
       var list = document.getElementById("identified-list");
-      var persons = getPersons().slice().sort(function (a, b) {
+      var persons = (await getPersons()).slice().sort(function (a, b) {
         return (a.verified ? 1 : 0) - (b.verified ? 1 : 0);
       });
       list.innerHTML = "";
       var verified = 0;
+      var present = 0;
       persons.forEach(function (p) {
-        if (p.verified) verified++;
+        var quantity = p.current_count || 1;
+        present += quantity;
+        if (p.verified) verified += quantity;
         var row = document.createElement("div");
         row.className = "identified-row" + (p.verified ? " verified" : " unverified");
         row.onclick = function () {
@@ -167,12 +219,21 @@
         };
         var avatar = document.createElement("span");
         avatar.className = "identified-avatar";
-        avatar.textContent = p.name.trim().charAt(0).toUpperCase();
+        if (!p.verified && p.face_frame) {
+          avatar.classList.add("face-avatar");
+          avatar.textContent = "";
+          var face = document.createElement("img");
+          face.src = p.face_frame;
+          face.alt = "Stored face for unverified person";
+          avatar.appendChild(face);
+        } else {
+          avatar.textContent = p.name.trim().charAt(0).toUpperCase();
+        }
         var info = document.createElement("div");
         info.className = "identified-info";
         var name = document.createElement("span");
         name.className = "identified-name";
-        name.textContent = p.name;
+        name.textContent = p.name + (quantity > 1 ? " (" + quantity + ")" : "");
         var badge = document.createElement("span");
         badge.className = "identified-badge " + (p.verified ? "badge-verified" : "badge-unverified");
         badge.textContent = p.verified ? "● Verified" : "● Unverified";
@@ -183,23 +244,49 @@
           cam.className = "view-cam-btn";
           cam.textContent = "View camera";
           info.appendChild(cam);
+          if (dashboardUser && dashboardUser.role.toLowerCase() === "admin") {
+            var remove = document.createElement("button");
+            remove.className = "dismiss-unverified-btn";
+            remove.textContent = "Remove";
+            remove.onclick = async function (event) {
+              event.stopPropagation();
+              var result = await API.removeUnverifiedPerson(p.id);
+              if (result.ok) {
+                renderIdentified();
+              } else {
+                remove.textContent = result.message || "Could not remove";
+              }
+            };
+            info.appendChild(remove);
+          }
         }
         row.appendChild(avatar);
         row.appendChild(info);
         list.appendChild(row);
       });
       getField("identified-count").textContent =
-        persons.length + " present • " + verified + " verified • " + (persons.length - verified) + " unverified";
+        present + " present • " + verified + " verified • " + (present - verified) + " unverified";
     }
 
     function openCameraView(person) {
-      document.getElementById("camera-modal-title").textContent = "Camera View — " + person.name;
-      document.getElementById("camera-live").innerHTML =
-        '<div class="cam-alert">⚠️ Unknown / Unverified person</div>' +
-        '<div class="cam-person">' + person.name.trim().charAt(0).toUpperCase() + "</div>";
+      document.getElementById("camera-modal-title").textContent = "Unverified Face Review — " + person.name;
+      var live = document.getElementById("camera-live");
+      live.innerHTML = '<div class="cam-alert">⚠️ Unknown / Unverified person</div>';
+      if (person.face_frame) {
+        var storedFace = document.createElement("img");
+        storedFace.className = "stored-face-frame";
+        storedFace.src = person.face_frame;
+        storedFace.alt = "Stored clear face frame for unverified person";
+        live.appendChild(storedFace);
+      } else {
+        var noFace = document.createElement("div");
+        noFace.className = "cam-person";
+        noFace.textContent = person.name.trim().charAt(0).toUpperCase();
+        live.appendChild(noFace);
+      }
       var zone = person.zone || "Camera Area";
       document.getElementById("camera-feed-caption").textContent =
-        "Detected: " + person.name + " • Location: " + zone + " • Status: Unverified";
+        "Stored incident frame • Location: " + zone + " • Status: Unverified";
       document.getElementById("camera-modal").classList.add("show");
     }
 
@@ -207,17 +294,25 @@
       document.getElementById("camera-modal").classList.remove("show");
     }
 
-    function getLiveCrowd() {
-      return (typeof DEMO_LIVE_CROWD !== "undefined") ? DEMO_LIVE_CROWD : [];
+    async function getLiveCrowdData() {
+      return await API.getLiveCrowd();
     }
 
-    function getCameras() {
-      return (typeof DEMO_CAMERAS !== "undefined") ? DEMO_CAMERAS : [];
+    async function getCamerasData() {
+      return await API.getCameras();
     }
 
-    function randomCrowd(threshold) {
-      var current = Math.floor(Math.random() * (threshold * 1.6));
-      return Math.min(current + 10, threshold + 30);
+    function liveCountFor(camId, fallback) {
+      var per = window._livePerCamera || {};
+      if (per[camId] != null) return per[camId];
+      return 0;
+    }
+
+    function historyFor(camId, fallback) {
+      var hist = window._liveHistory || {};
+      var series = hist[camId];
+      if (series && series.length) return series;
+      return [0, 0, 0, fallback || 0];
     }
 
     function buildSparkline(points, danger) {
@@ -249,9 +344,8 @@
       return svg;
     }
 
-    function buildLiveChart() {
+    function buildLiveChartFromData(data) {
       var chart = document.getElementById("live-chart");
-      var data = getLiveCrowd();
       chart.innerHTML = "";
       if (!data || !data.length) return;
 
@@ -267,7 +361,7 @@
       var padTop = 20;
       var padBottom = 34;
       var n = data.length;
-      var step = (W - padX * 2) / (n - 1);
+      var step = n > 1 ? (W - padX * 2) / (n - 1) : 0;
 
       function x(i) {
         return padX + i * step;
@@ -363,24 +457,113 @@
       });
       var avg = counts.length ? Math.round(sum / counts.length) : 0;
       getField("live-total-value").textContent = sum;
-      getField("stat-instances").textContent = sum;
       getField("live-peak").textContent = peak;
       getField("live-avg").textContent = avg;
       getField("live-cameras").textContent = counts.length;
     }
 
-    function renderCameras() {
+    function refreshLiveCrowdSummary(data) {
+      getField("live-total-value").textContent = data.total || 0;
+      getField("live-peak").textContent = data.peak || 0;
+      getField("live-avg").textContent = data.avg || 0;
+      getField("live-cameras").textContent = data.camera_count || 0;
+    }
+
+    function setFeedHealth(running, total) {
+      getField("stat-health").textContent = total ? Math.round((running / total) * 100) + "%" : "—";
+      var detail = getField("stat-health-detail");
+      detail.textContent = total
+        ? running + " of " + total + " camera feeds live"
+        : "No cameras configured";
+      detail.classList.toggle("metric-warning", total > 0 && running < total);
+    }
+
+    function renderFeedHealth(feeds, cameraCount) {
+      var running = Object.keys(feeds || {}).filter(function (cameraId) {
+        return feeds[cameraId].running;
+      }).length;
+      var total = cameraCount == null ? Object.keys(feeds || {}).length : cameraCount;
+      setFeedHealth(running, total);
+    }
+
+    async function renderDashboardMetrics() {
+      var metrics = await API.getDashboardMetrics();
+      if (!metrics.ok) return;
+      getField("stat-storage").textContent = metrics.database_storage;
+      getField("stat-storage-detail").textContent = "Current database size";
+      setFeedHealth(metrics.running_feeds, metrics.camera_count);
+    }
+
+    // Small live frames pinned inside each dashboard camera card. Each one
+    // owns an object URL (same scheme as LiveView) so frames can be swapped
+    // in without reassigning src mid-load.
+    var dashFrames = [];
+    var dashFrameTimer = null;
+
+    function disposeDashFrames() {
+      dashFrames.forEach(function (f) {
+        if (f.url) URL.revokeObjectURL(f.url);
+      });
+      dashFrames = [];
+    }
+
+    async function tickDashFrames() {
+      if (!dashFrames.length) return;
+      var feeds = await API.getCameraFeedStatus();
+      renderFeedHealth(feeds, dashFrames.length);
+      for (var i = 0; i < dashFrames.length; i++) {
+        var f = dashFrames[i];
+        var feed = feeds[f.id];
+        var running = !!(feed && feed.running);
+
+        if (f.running !== running) {
+          f.running = running;
+          f.frame.classList.toggle("has-signal", running);
+          f.placeholder.textContent = running ? "" : "No signal";
+          if (!running && f.url) {
+            URL.revokeObjectURL(f.url);
+            f.url = null;
+            f.img.removeAttribute("src");
+          }
+        }
+        if (!running) continue;
+
+        var next = await API.fetchFrame(f.id);
+        if (next && f.running) {
+          var old = f.url;
+          f.url = next;
+          f.img.src = next;
+          if (old) URL.revokeObjectURL(old);
+        } else if (next) {
+          URL.revokeObjectURL(next);
+        }
+      }
+    }
+
+    function startDashFrameLoop() {
+      if (dashFrameTimer) return;
+      tickDashFrames();
+      dashFrameTimer = window.setInterval(tickDashFrames, 1000);
+    }
+
+    window.addEventListener("pagehide", function () {
+      if (dashFrameTimer) window.clearInterval(dashFrameTimer);
+      disposeDashFrames();
+    });
+
+    async function renderCameras() {
       var grid = document.getElementById("camera-cards-grid");
-      var cameras = getCameras();
+      var cameras = await getCamerasData();
       if (!cameras.length) { grid.innerHTML = ""; return; }
 
       var counts = [];
       cameras.forEach(function (cam) {
-        var count = randomCrowd(cam.threshold);
+        var count = liveCountFor(cam.id, cam.threshold);
         counts.push({ cam: cam, count: count });
       });
 
       grid.innerHTML = "";
+      disposeDashFrames();
       counts.forEach(function (item) {
         var cam = item.cam;
         var count = item.count;
@@ -388,6 +571,14 @@
 
         var card = document.createElement("div");
         card.className = "cam-card" + (danger ? " danger" : "");
+        card.dataset.cameraId = cam.id;
+        // Clicking a dashboard card jumps to the same feed on Live Cameras.
+        card.onclick = function () {
+          window.parent.postMessage(
+            { type: "nav:navigate", page: "live-cameras", cameraId: cam.id },
+            window.location.origin
+          );
+        };
 
         var head = document.createElement("div");
         head.className = "cam-card-head";
@@ -404,6 +595,27 @@
         head.appendChild(name);
         head.appendChild(id);
         head.appendChild(status);
+
+        // Live frame thumbnail; shows "No signal" until a feed arrives.
+        var frame = document.createElement("div");
+        frame.className = "cam-card-frame";
+        var fimg = document.createElement("img");
+        fimg.className = "cam-card-frame-img";
+        fimg.alt = cam.name + " live feed";
+        var fph = document.createElement("div");
+        fph.className = "cam-card-frame-placeholder";
+        fph.textContent = "No signal";
+        frame.appendChild(fimg);
+        frame.appendChild(fph);
+
+        dashFrames.push({
+          id: cam.id,
+          frame: frame,
+          img: fimg,
+          placeholder: fph,
+          url: null,
+          running: false,
+        });
 
         var body = document.createElement("div");
         body.className = "cam-card-body";
@@ -425,26 +637,28 @@
 
         var right = document.createElement("div");
         right.className = "cam-card-chart";
-        right.appendChild(buildSparkline([count * 0.4, count * 0.8, count * 0.6, count], danger));
+        right.appendChild(buildSparkline(historyFor(cam.id, count), danger));
 
         body.appendChild(left);
         body.appendChild(right);
 
         card.appendChild(head);
+        card.appendChild(frame);
         card.appendChild(body);
         grid.appendChild(card);
       });
 
-      refreshLiveTotals(counts);
+      startDashFrameLoop();
+      refreshLiveTotals(counts.filter(function (item) { return item.cam.analysis_mode !== "authentication"; }));
     }
 
-    function getTeamMembers() {
-      return (typeof DEMO_TEAM_MEMBERS !== "undefined") ? DEMO_TEAM_MEMBERS : [];
+    async function getTeamMembersData() {
+      return await API.getTeamMembers();
     }
 
-    function renderTeam() {
+    async function renderTeam() {
       var list = document.getElementById("team-access-list");
-      var members = getTeamMembers();
+      var members = await getTeamMembersData();
       list.innerHTML = "";
       var active = 0;
 
@@ -475,16 +689,6 @@
         var btn = document.createElement("button");
         btn.className = "team-toggle " + (m.active ? "btn-deactivate" : "btn-activate");
         btn.textContent = m.active ? "Deactivate" : "Activate";
-        btn.onclick = (function (member, stateEl, btnEl) {
-          return function () {
-            member.active = !member.active;
-            stateEl.className = "team-state " + (member.active ? "state-active" : "state-deactivated");
-            stateEl.textContent = member.active ? "● Active" : "● Deactivated";
-            btnEl.className = "team-toggle " + (member.active ? "btn-deactivate" : "btn-activate");
-            btnEl.textContent = member.active ? "Deactivate" : "Activate";
-            updateTeamActiveCount();
-          };
-        })(m, state, btn);
 
         row.appendChild(avatar);
         row.appendChild(info);
@@ -496,19 +700,22 @@
       getField("team-active-count").textContent = active + " of " + members.length + " active";
     }
 
-    function updateTeamActiveCount() {
-      var members = getTeamMembers();
-      var active = 0;
-      members.forEach(function (m) {
-        if (m.active) active++;
-      });
-      getField("team-active-count").textContent = active + " of " + members.length + " active";
-    }
-
     (async () => {
       const user = await Auth.currentUser();
 
-      if (!user) return;
+      if (!user) {
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+        return;
+      }
+
+      const role = user.role;
+      dashboardUser = user;
+      const roleMeta = Auth.ROLES[role];
+
+      getField("user-name").textContent = user.name;
+      getField("avatar").textContent = user.name.trim().charAt(0).toUpperCase();
+      getField("user-role").textContent = role;
+      getField("user-role").classList.add(role);
 
       getField("welcome-title").textContent = "Welcome back, " + user.name.split(" ")[0] + "!";
       getField("welcome-sub").textContent =
@@ -516,19 +723,36 @@
         new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }) +
         ".";
 
-      buildMiniChart();
+      await buildMiniChart();
 
-      renderIdentified();
+      await renderDashboardMetrics();
 
-      buildLiveChart();
+      await renderIdentified();
+      setInterval(renderIdentified, 1500);
 
-      renderCameras();
+      var liveData = await getLiveCrowdData();
+      window._livePerCamera = liveData.per_camera || {};
+      window._liveHistory = liveData.history || {};
+      buildLiveChartFromData(liveData.timeline || []);
+      refreshLiveCrowdSummary(liveData);
 
-      renderTeam();
+      await renderCameras();
 
-      setInterval(function () {
-        renderCameras();
-      }, 2500);
+      await renderTeam();
+
+      // Totals are live engine output, not a page-load snapshot.
+      setInterval(async function () {
+        var updated = await getLiveCrowdData();
+        window._livePerCamera = updated.per_camera || {};
+        window._liveHistory = updated.history || {};
+        buildLiveChartFromData(updated.timeline || []);
+        refreshLiveCrowdSummary(updated);
+      }, 1500);
+
+      getField("logout-btn").addEventListener("click", async () => {
+        await Auth.logout();
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+      });
     })();
   </script>
 </body>

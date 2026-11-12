@@ -1,0 +1,371 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Cameras | CrowdCount</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=31" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+</head>
+<body class="frame-body">
+  <main class="dashboard dashboard-frame">
+    <div class="dashboard-body">
+      <div class="dashboard-welcome">
+        <h1 id="live-cam-title">Live Cameras</h1>
+        <p id="live-cam-sub">Real-time crowd density across every monitored camera.</p>
+        <p class="engine-status" id="engine-status" aria-live="polite">Checking vision engines…</p>
+      </div>
+
+      <div class="stats-grid cam-live-stats">
+        <div class="stat-card crowd-card">
+          <div class="stat-label">Total Cameras</div>
+          <div class="stat-value stat-value-bold" id="live-total">0</div>
+          <div class="stat-delta">Across all zones</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Running Feeds</div>
+          <div class="stat-value" id="live-sum">0</div>
+          <div class="stat-delta" id="live-running-delta">● Video is playing</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Offline Cameras</div>
+          <div class="stat-value" id="live-offline">0</div>
+          <div class="stat-delta" id="live-danger-delta">● Feed not running</div>
+        </div>
+      </div>
+
+      <section class="camera-cards-section">
+        <div class="section-heading">Camera Live Feeds</div>
+        <div class="camera-cards-grid live-cam-grid" id="live-cam-grid"></div>
+      </section>
+    </div>
+  </main>
+
+  <div class="graph-modal" id="live-cam-modal" onclick="if(event.target===this)closeLiveCam()">
+    <div class="graph-modal-box">
+      <div class="graph-modal-header">
+        <h3 id="live-cam-modal-title">Camera View</h3>
+        <button class="graph-close" onclick="closeLiveCam()">✕</button>
+      </div>
+      <div class="camera-view-body">
+        <div class="camera-feed" id="live-cam-feed">
+          <div class="camera-live" id="live-cam-feed-live"></div>
+          <div class="camera-feed-footer" id="live-cam-feed-caption"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="{% static 'js/api.js' %}?v=4"></script>
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script>
+    function getField(id) {
+      return document.getElementById(id);
+    }
+
+    // A live view owns one <img> plus the timer that refills it. Swapping in a
+// freshly fetched object URL (rather than reassigning src on the same URL)
+// lets the previous frame stay on screen while the next one loads, and lets us
+// release the old blob when the view is torn down.
+function LiveView(cameraId, img) {
+      this.cameraId = cameraId;
+      this.img = img;
+      this.url = null;
+      this.timer = null;
+      this.busy = false;
+    }
+
+    LiveView.prototype.tick = async function () {
+      if (this.busy) return;
+      this.busy = true;
+      try {
+        var next = await API.fetchFrame(this.cameraId);
+        if (next) {
+          var old = this.url;
+          this.url = next;
+          this.img.src = next;
+          if (old) URL.revokeObjectURL(old);
+        }
+      } finally {
+        this.busy = false;
+      }
+    };
+
+    LiveView.prototype.start = function () {
+      var self = this;
+      this.tick();
+      this.timer = window.setInterval(function () { self.tick(); }, 400);
+    };
+
+    LiveView.prototype.stop = function () {
+      if (this.timer) {
+        window.clearInterval(this.timer);
+        this.timer = null;
+      }
+    };
+
+    LiveView.prototype.dispose = function () {
+      this.stop();
+      if (this.url) {
+        URL.revokeObjectURL(this.url);
+        this.url = null;
+      }
+    };
+
+    var views = [];
+    var modalView = null;
+    var liveState = { feeds: {}, counts: {} };
+
+    function clearViews() {
+      views.forEach(function (v) { v.dispose(); });
+      views = [];
+    }
+
+    function openLiveCam(cam, feed, crowdCount) {
+      getField("live-cam-modal-title").textContent = cam.name + " — " + cam.id;
+
+      var host = getField("live-cam-feed-live");
+      host.innerHTML = "";
+      host.classList.toggle("is-offline", !feed.running);
+
+      var img = document.createElement("img");
+      img.className = "live-cam-frame-img";
+      img.alt = cam.name + " live feed";
+
+      host.appendChild(img);
+      if (!feed.running) {
+        var badge = document.createElement("div");
+        badge.className = "cam-alert";
+        badge.textContent = "⚠️ Feed offline";
+        host.appendChild(badge);
+      }
+
+      getField("live-cam-feed-caption").textContent =
+        cam.type + " • Crowd: " + (crowdCount == null ? "Waiting for analysis" : crowdCount) +
+        " • Threshold: " + cam.threshold + " • Status: " + (feed.running ? "Running" : "Offline");
+
+      if (modalView) modalView.dispose();
+      modalView = null;
+      if (feed.running) {
+        modalView = new LiveView(cam.id, img);
+        modalView.start();
+      }
+
+      getField("live-cam-modal").classList.add("show");
+    }
+
+    function closeLiveCam() {
+      if (modalView) {
+        modalView.dispose();
+        modalView = null;
+      }
+      getField("live-cam-modal").classList.remove("show");
+    }
+
+    function buildFeedView(cam, feed) {
+      var box = document.createElement("div");
+      box.className = "live-cam-feed" + (feed.running ? "" : " is-offline");
+
+      var img = document.createElement("img");
+      img.className = "live-cam-frame-img";
+      img.alt = cam.name + " live feed";
+      box.appendChild(img);
+
+      var placeholder = document.createElement("div");
+      placeholder.className = "live-cam-feed-placeholder";
+      placeholder.textContent = feed.running ? "" : "No signal";
+      box.appendChild(placeholder);
+
+      var tag = document.createElement("span");
+      tag.className = "live-cam-feed-tag";
+      tag.textContent = cam.analysis_mode === "authentication" ? "Face Authentication" : "Crowd Count";
+      box.appendChild(tag);
+
+      return box;
+    }
+
+    function updateCardStatus(card, feed, crowdCount) {
+      var status = card.querySelector(".cam-card-status");
+      var placeholder = card.querySelector(".live-cam-feed-placeholder");
+
+      card.classList.toggle("is-offline", !feed.running);
+      status.className = "cam-card-status " + (feed.running ? "status-ok" : "status-danger");
+      status.textContent = feed.running ? "● Running" : "● Offline";
+      placeholder.textContent = feed.running ? "" : "No signal";
+      if (!feed.running) {
+        var img = card.querySelector(".live-cam-frame-img");
+        if (img) img.removeAttribute("src");
+      }
+      var count = card.querySelector(".live-cam-count");
+      if (count) count.textContent = crowdCount == null ? "Crowd: —" : "Crowd: " + crowdCount;
+    }
+
+    function renderEngineStatus(engines) {
+      var element = getField("engine-status");
+      var crowd = engines && engines.crowd;
+      var face = engines && engines.face;
+      if (!crowd || !face) {
+        element.className = "engine-status engine-status-waiting";
+        element.textContent = "Checking vision engines…";
+        return;
+      }
+      if (crowd.ready && face.ready) {
+        element.className = "engine-status engine-status-ready";
+        element.textContent = "● Crowd and face engines connected — annotated analysis is live.";
+        return;
+      }
+      element.className = "engine-status engine-status-warning";
+      element.textContent = "● " + (crowd.message || face.message || "Vision engine is not ready.");
+    }
+
+    function renderLiveCameras(cameras, feeds, liveCrowd) {
+      var grid = getField("live-cam-grid");
+      var counts = (liveCrowd && liveCrowd.per_camera) || {};
+      liveState = { feeds: feeds, counts: counts };
+
+      var runningCams = 0;
+      var offlineCams = 0;
+      cameras.forEach(function (cam) {
+        var feed = feeds[cam.id] || { running: false, seq: 0 };
+        if (feed.running) runningCams++;
+        else offlineCams++;
+      });
+
+      // Rebuilding the grid on every poll would tear down each <img> and
+      // restart its request. Only redraw when the camera list itself changes,
+      // and otherwise just flip the badges in place.
+      var signature = cameras.map(function (c) { return c.id + ":" + c.type + ":" + c.name; }).join("|");
+      if (signature !== grid.dataset.signature) {
+        clearViews();
+        grid.innerHTML = "";
+        grid.dataset.signature = signature;
+
+        if (!cameras.length) {
+          var empty = document.createElement("div");
+          empty.className = "live-cam-empty";
+          empty.textContent = "No cameras yet. Add one from Camera Management.";
+          grid.appendChild(empty);
+        }
+
+        cameras.forEach(function (cam) {
+          var feed = feeds[cam.id] || { running: false, seq: 0 };
+
+          var card = document.createElement("div");
+          card.className = "live-cam-card" + (feed.running ? "" : " is-offline");
+          card.dataset.cameraId = cam.id;
+          card.onclick = function () {
+            openLiveCam(cam, liveState.feeds[cam.id] || feed, liveState.counts[cam.id]);
+          };
+
+          var head = document.createElement("div");
+          head.className = "live-cam-card-head";
+          var icon = document.createElement("span");
+          icon.className = "live-cam-icon";
+          icon.textContent = "📷";
+          var nameWrap = document.createElement("div");
+          nameWrap.className = "live-cam-name-wrap";
+          var name = document.createElement("span");
+          name.className = "cam-card-name";
+          name.textContent = cam.name;
+          nameWrap.appendChild(name);
+          var camId = document.createElement("span");
+          camId.className = "cam-card-id";
+          camId.textContent = cam.id;
+          var status = document.createElement("span");
+          status.className = "cam-card-status " + (feed.running ? "status-ok" : "status-danger");
+          status.textContent = feed.running ? "● Running" : "● Offline";
+          head.appendChild(icon);
+          head.appendChild(nameWrap);
+          head.appendChild(camId);
+          var count = document.createElement("span");
+          count.className = "live-cam-count";
+          count.textContent = counts[cam.id] == null ? "Crowd: —" : "Crowd: " + counts[cam.id];
+          head.appendChild(count);
+          head.appendChild(status);
+
+          card.appendChild(head);
+          card.appendChild(buildFeedView(cam, feed));
+          grid.appendChild(card);
+        });
+      } else {
+        cameras.forEach(function (cam) {
+          var card = grid.querySelector('[data-camera-id="' + CSS.escape(cam.id) + '"]');
+          if (card) updateCardStatus(card, feeds[cam.id] || { running: false }, counts[cam.id]);
+        });
+      }
+
+      
+
+      // A feed can start or stop while the page is open (camera added elsewhere,
+      // laptop lid closed, webcam unplugged), so reconcile views against the
+      // reported state instead of only wiring them up at render time.
+      var cameraIndex = {};
+      cameras.forEach(function (cam) {
+        cameraIndex[cam.id] = feeds[cam.id] || { running: false };
+      });
+
+      views = views.filter(function (v) {
+        var still = cameraIndex[v.cameraId];
+        if (!still || !still.running) v.dispose();
+        return !!(still && still.running);
+      });
+
+      cameras.forEach(function (cam) {
+        if (!cameraIndex[cam.id].running) return;
+        var card = grid.querySelector('[data-camera-id="' + CSS.escape(cam.id) + '"]');
+        if (!card) return;
+        var has = views.some(function (v) { return v.cameraId === cam.id; });
+        if (has) return;
+        var view = new LiveView(cam.id, card.querySelector(".live-cam-frame-img"));
+        views.push(view);
+        view.start();
+      });
+
+      getField("live-total").textContent = cameras.length;
+      getField("live-sum").textContent = runningCams;
+      getField("live-offline").textContent = offlineCams;
+      getField("live-running-delta").textContent = runningCams ? "● Video is playing" : "● No active feed";
+      getField("live-running-delta").style.color = runningCams ? "var(--success)" : "var(--text-muted)";
+      getField("live-danger-delta").textContent = offlineCams ? "● Feed not running" : "● All feeds up";
+      getField("live-danger-delta").style.color = offlineCams ? "var(--danger)" : "var(--success)";
+    }
+
+    (async () => {
+      const user = await Auth.currentUser();
+      if (!user) return;
+
+      // The dashboard can hand over the camera its card was showing so the
+      // user lands straight on that same feed instead of the top of the grid.
+      var pendingCameraId = null;
+      try {
+        pendingCameraId = window.parent.__pendingCameraId || null;
+        window.parent.__pendingCameraId = null;
+      } catch (e) { /* not embedded (opened directly) */ }
+
+      async function refresh() {
+        var [cameras, feeds, liveCrowd, engineResult] = await Promise.all([
+          API.getCameras(),
+          API.getCameraFeedStatus(),
+          API.getLiveCrowd(),
+          API.getEngineStatus(),
+        ]);
+        renderEngineStatus(engineResult.engines);
+        renderLiveCameras(cameras, feeds, liveCrowd);
+        return { cameras: cameras, feeds: feeds };
+      }
+
+      var first = await refresh();
+      setInterval(refresh, 1500);
+
+      if (pendingCameraId) {
+        var cam = first.cameras.filter(function (c) { return c.id === pendingCameraId; })[0];
+        if (cam) openLiveCam(cam, first.feeds[cam.id] || { running: false });
+      }
+    })();
+  </script>
+</body>
+</html>

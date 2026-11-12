@@ -1,0 +1,3 @@
+# Live enrolled/unknown face comparison used by face_detection_engine.py
+insightface==1.0.1
+onnxruntime==1.29.0
