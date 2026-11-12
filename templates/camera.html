@@ -1,0 +1,748 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Camera Management | CrowdCount</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=34" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+</head>
+<body class="frame-body">
+  <main class="dashboard dashboard-frame">
+    <div class="dashboard-body">
+      <div class="dashboard-welcome">
+        <h1 id="welcome-title">Camera Management</h1>
+        <p id="welcome-sub">Manage and monitor all CCTV cameras across your monitored zones.</p>
+      </div>
+
+      <div class="stats-grid cam-mgmt-stats">
+        <div class="stat-card crowd-card">
+          <div class="stat-label">Total Cameras</div>
+          <div class="stat-value" id="mgmt-total">0</div>
+          <div class="stat-delta">Across all zones</div>
+        </div>
+        <div class="stat-card identified-card">
+          <div class="stat-label">Active</div>
+          <div class="stat-value" id="mgmt-active">0</div>
+          <div class="stat-delta">● Online</div>
+        </div>
+        <div class="stat-card identified-card">
+          <div class="stat-label">Danger Zones</div>
+          <div class="stat-value" id="mgmt-danger">0</div>
+          <div class="stat-delta">High crowd density</div>
+        </div>
+      </div>
+
+      <section class="camera-cards-section">
+        <div class="section-heading">Cameras &amp; Locations</div>
+        <div class="camera-cards-grid mgmt-cards-grid" id="mgmt-cards-grid">
+          <div class="cam-card mgmt-card mgmt-add-card" onclick="openAddCamera()">
+            <div class="mgmt-add-symbol">＋</div>
+            <div class="mgmt-add-label">Add Camera</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="graph-modal" id="add-camera-modal" onclick="if(event.target===this)closeAddCamera()">
+    <div class="graph-modal-box mgmt-modal-box">
+      <div class="graph-modal-header">
+        <h3 id="camera-modal-title">Add Camera</h3>
+        <button class="graph-close" onclick="closeAddCamera()">✕</button>
+      </div>
+      <form class="mgmt-form" id="add-camera-form" onsubmit="return submitAddCamera(event)">
+        <div class="mgmt-form-grid">
+          <div class="form-group">
+            <label>Camera ID</label>
+            <input type="text" id="fcam-id" placeholder="e.g. CAM-007" />
+          </div>
+          <div class="form-group">
+            <label>Camera Name</label>
+            <input type="text" id="fcam-name" placeholder="e.g. Loading Bay" />
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" id="fcam-location" placeholder="e.g. Warehouse - East Side" />
+          </div>
+          <div class="form-group">
+            <label>Zone</label>
+            <input type="text" id="fcam-zone" placeholder="e.g. Restricted Zone" />
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select id="fcam-type" onchange="toggleVideoFileField()">
+              <option value="Fixed IP Camera">Fixed IP Camera</option>
+              <option value="Video File">Video File</option>
+              <option value="Web Cam">Web Cam</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Analysis Mode</label>
+            <select id="fcam-analysis-mode" onchange="toggleAnalysisFields()">
+              <option value="crowd">Crowd Count</option>
+              <option value="authentication">Face Authentication</option>
+            </select>
+            <small class="form-hint" id="analysis-mode-hint">Counts people and raises an alert at the configured threshold.</small>
+          </div>
+          <div class="form-group" id="fcam-threshold-group">
+            <label>Crowd Threshold</label>
+            <input type="number" id="fcam-threshold" min="1" placeholder="e.g. 50" />
+          </div>
+          <div class="form-group mgmt-file-group" id="fcam-enrollment-group" style="display: none;">
+            <label>Folder of Face Images</label>
+            <input type="file" id="fcam-enrollment-files" accept="image/jpeg,image/png,image/webp" webkitdirectory directory multiple onchange="showEnrollmentFolder()" />
+            <div class="face-folder-picker">
+              <button type="button" class="mgmt-browse-btn" onclick="getField('fcam-enrollment-files').click()">Choose Face Folder</button>
+              <span id="fcam-enrollment-summary">No folder selected</span>
+            </div>
+            <small class="form-hint">Choose a folder. Detected faces will be shown next, then you can name each face you want to enroll.</small>
+          </div>
+          <div class="form-group mgmt-file-group" id="fcam-file-group" style="display: none;">
+            <label>Video File</label>
+            <div class="mgmt-dropzone" id="fcam-dropzone">
+              <input type="file" id="fcam-file" accept="video/*" onchange="handleFilePick(event)" />
+              <div class="mgmt-dropzone-empty" id="fcam-dropzone-empty">
+                <span class="mgmt-dropzone-icon">🎬</span>
+                <span class="mgmt-dropzone-text">Drag &amp; drop a video file here</span>
+                <span class="mgmt-dropzone-hint">MP4, AVI, MOV or MKV — up to 200 MB</span>
+                <span class="mgmt-dropzone-or">or</span>
+                <button type="button" class="mgmt-browse-btn" onclick="getField('fcam-file').click()">Browse Files</button>
+              </div>
+              <div class="mgmt-dropzone-filled" id="fcam-dropzone-filled" style="display: none;">
+                <span class="mgmt-file-icon">🎥</span>
+                <div class="mgmt-file-info">
+                  <span class="mgmt-file-name" id="fcam-file-name"></span>
+                  <span class="mgmt-file-size" id="fcam-file-size"></span>
+                </div>
+                <button type="button" class="mgmt-file-clear" title="Remove file" onclick="clearFilePick(event)">✕</button>
+              </div>
+            </div>
+            <div class="mgmt-file-preview" id="fcam-file-preview" style="display: none;">
+              <video id="fcam-video" muted playsinline loop controls preload="metadata"></video>
+            </div>
+          </div>
+        </div>
+        <div class="alert" id="add-camera-error"></div>
+        <div class="mgmt-form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddCamera()">Cancel</button>
+          <button type="submit" class="btn" id="add-camera-submit">Add Camera</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="graph-modal" id="face-candidate-modal" onclick="if(event.target===this)closeFaceCandidates()">
+    <div class="graph-modal-box mgmt-modal-box">
+      <div class="graph-modal-header">
+        <h3>Name Detected Faces</h3>
+        <button class="graph-close" onclick="closeFaceCandidates()">✕</button>
+      </div>
+      <div class="face-candidate-help">Enter a name for each person you want this camera to authenticate. Leave a card blank to ignore it.</div>
+      <div class="face-candidate-grid" id="face-candidate-grid"></div>
+      <div class="alert" id="face-candidate-error"></div>
+      <div class="mgmt-form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeFaceCandidates()">Cancel</button>
+        <button type="button" class="btn" onclick="saveFaceCandidates()">Save Enrolled Faces</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="graph-modal" id="remove-camera-modal" onclick="if(event.target===this)closeRemoveCamera()">
+    <div class="graph-modal-box mgmt-modal-box mgmt-remove-box">
+      <div class="graph-modal-header">
+        <h3>Remove Camera</h3>
+        <button class="graph-close" onclick="closeRemoveCamera()">✕</button>
+      </div>
+      <div class="mgmt-remove-body">
+        <div class="mgmt-remove-cam">
+          <span class="cam-card-id" id="rm-cam-id"></span>
+          <span class="mgmt-remove-name" id="rm-cam-name"></span>
+        </div>
+        <p class="mgmt-remove-loc">Location: <strong id="rm-cam-location"></strong></p>
+        <p class="mgmt-remove-warn">This will remove the camera from your list. Please reverify before continuing.</p>
+        <label class="mgmt-reverify">
+          <input type="checkbox" id="rm-reverify" onchange="getField('rm-remove-btn').disabled = !this.checked" />
+          <span>I confirm and reverify removal of this camera</span>
+        </label>
+        <div class="alert" id="rm-error"></div>
+        <div class="mgmt-form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeRemoveCamera()">Cancel</button>
+          <button type="button" class="btn btn-danger" id="rm-remove-btn" disabled onclick="confirmRemoveCamera()">Remove</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/auth.js' %}"></script>
+  <script src="{% static 'js/api.js' %}?v=6"></script>
+  <script>
+    function getField(id) {
+      return document.getElementById(id);
+    }
+
+    function camLocation(cam) {
+      return cam.location || cam.name || "Unknown Location";
+    }
+
+    function camStatus(cam) {
+      return cam.status || "active";
+    }
+
+    function buildAddCard() {
+      var card = document.createElement("div");
+      card.className = "cam-card mgmt-card mgmt-add-card";
+      card.onclick = openAddCamera;
+      var symbol = document.createElement("div");
+      symbol.className = "mgmt-add-symbol";
+      symbol.textContent = "＋";
+      var label = document.createElement("div");
+      label.className = "mgmt-add-label";
+      label.textContent = "Add Camera";
+      card.appendChild(symbol);
+      card.appendChild(label);
+      return card;
+    }
+
+    var pickedFile = null;
+    var pickedResolution = "";
+    var pickedUrl = null;
+    var pendingFaceCameraId = null;
+    var editingCamera = null;
+
+    function hostFrame() {
+      try {
+        if (window.parent && window.parent !== window) return window.parent;
+      } catch (err) {
+        return null;
+      }
+      return null;
+    }
+
+    function handSourceToHost(cameraId, type, analysisMode) {
+      var host = hostFrame();
+      if (!host || !host.Capture) return false;
+      try {
+        host.postMessage({
+          type: "camera:add-source",
+          cameraId: cameraId,
+          cameraType: type,
+          analysisMode: analysisMode || "crowd",
+          file: type === "Video File" ? pickedFile : null,
+        }, window.location.origin);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function tellHostToStop(cameraId) {
+      var host = hostFrame();
+      if (!host || !host.Capture) return;
+      try {
+        host.postMessage({ type: "camera:remove", cameraId: cameraId }, window.location.origin);
+      } catch (err) {
+        /* host is gone; nothing to release */
+      }
+    }
+
+    window.addEventListener("message", function (event) {
+      if (event.origin !== window.location.origin) return;
+      var msg = event.data;
+      if (msg && msg.type === "camera:source-error") {
+        window.alert(msg.message || "Could not start the feed for this camera.");
+      }
+    });
+
+    // Browsers only grant camera permission from a real user gesture, and the
+    // gesture cannot be forwarded across postMessage. Asking here keeps the
+    // prompt inside the click that opened this form; the grant is remembered
+    // for the origin, so the engine's own request later resolves silently.
+    async function confirmWebcamAccess() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return "This browser cannot open a webcam feed.";
+      }
+      try {
+        var stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        return "";
+      } catch (err) {
+        if (err && err.name === "NotAllowedError") {
+          return "Camera permission was denied. Allow it in the browser to use a webcam feed.";
+        }
+        if (err && err.name === "NotFoundError") {
+          return "No webcam was found on this device.";
+        }
+        return "Could not open the webcam.";
+      }
+    }
+
+    function formatFileSize(bytes) {
+      if (!bytes) return "0 B";
+      var mb = bytes / (1024 * 1024);
+      if (mb >= 1) return mb.toFixed(2) + " MB";
+      return (bytes / 1024).toFixed(0) + " KB";
+    }
+
+    function toggleVideoFileField() {
+      var isVideo = getField("fcam-type").value === "Video File";
+      getField("fcam-file-group").style.display = isVideo ? "" : "none";
+    }
+
+    function toggleAnalysisFields() {
+      var authentication = getField("fcam-analysis-mode").value === "authentication";
+      getField("fcam-threshold-group").style.display = authentication ? "none" : "";
+      getField("fcam-enrollment-group").style.display = authentication ? "" : "none";
+      getField("analysis-mode-hint").textContent = authentication
+        ? "Runs the face engine only. Enrolled identities are required for identity verification."
+        : "Counts people and raises an alert at the configured threshold.";
+      if (authentication && editingCamera && editingCamera.analysis_mode !== "authentication" &&
+          !getField("fcam-enrollment-files").files.length) {
+        getField("fcam-enrollment-summary").textContent = "Choose a face folder to set up authentication";
+      }
+    }
+
+    function showEnrollmentFolder() {
+      var files = getField("fcam-enrollment-files").files;
+      var summary = getField("fcam-enrollment-summary");
+      if (!files.length) {
+        summary.textContent = "No folder selected";
+        return;
+      }
+      var firstPath = files[0].webkitRelativePath || files[0].name;
+      var folder = firstPath.split("/")[0];
+      summary.textContent = folder + " — " + files.length + " image" + (files.length === 1 ? "" : "s") + " selected";
+    }
+
+    function setFile(file) {
+      if (!file) return;
+      if (file.type && file.type.indexOf("video") === -1) {
+        showAddError(getField("add-camera-error"), "Please select a valid video file.");
+        return;
+      }
+      if (file.size > 200 * 1024 * 1024) {
+        showAddError(getField("add-camera-error"), "File is too large. Maximum size is 200 MB.");
+        return;
+      }
+      pickedFile = file;
+      getField("fcam-dropzone").classList.add("has-file");
+      getField("fcam-dropzone-empty").style.display = "none";
+      getField("fcam-dropzone-filled").style.display = "flex";
+      getField("fcam-file-name").textContent = file.name;
+      getField("fcam-file-size").textContent = formatFileSize(file.size);
+      if (pickedUrl) URL.revokeObjectURL(pickedUrl);
+      pickedUrl = URL.createObjectURL(file);
+      var video = getField("fcam-video");
+      video.src = pickedUrl;
+      getField("fcam-file-preview").style.display = "block";
+      video.play().catch(function () {});
+      video.onloadedmetadata = function () {
+        if (video.videoWidth && video.videoHeight) {
+          pickedResolution = video.videoWidth + " x " + video.videoHeight;
+        }
+      };
+    }
+
+    function clearFilePick(event) {
+      if (event) event.stopPropagation();
+      pickedFile = null;
+      pickedResolution = "";
+      if (pickedUrl) {
+        URL.revokeObjectURL(pickedUrl);
+        pickedUrl = null;
+      }
+      getField("fcam-file").value = "";
+      getField("fcam-dropzone").classList.remove("has-file", "dragover");
+      getField("fcam-dropzone-empty").style.display = "flex";
+      getField("fcam-dropzone-filled").style.display = "none";
+      getField("fcam-file-preview").style.display = "none";
+      getField("fcam-video").removeAttribute("src");
+    }
+
+    function handleFilePick(event) {
+      setFile(event.target.files && event.target.files[0]);
+    }
+
+    function handleDrop(event) {
+      event.preventDefault();
+      var zone = getField("fcam-dropzone");
+      zone.classList.remove("dragover");
+      var files = event.dataTransfer && event.dataTransfer.files;
+      if (files && files.length) setFile(files[0]);
+    }
+
+    (function initDropzone() {
+      var zone = getField("fcam-dropzone");
+      zone.addEventListener("dragover", function (event) {
+        event.preventDefault();
+        zone.classList.add("dragover");
+      });
+      zone.addEventListener("dragleave", function (event) {
+        if (!zone.contains(event.relatedTarget)) zone.classList.remove("dragover");
+      });
+      zone.addEventListener("drop", handleDrop);
+    })();
+
+    function openAddCamera() {
+      editingCamera = null;
+      getField("add-camera-form").reset();
+      getField("add-camera-modal").classList.add("show");
+      getField("camera-modal-title").textContent = "Add Camera";
+      getField("fcam-id").disabled = false;
+      getField("add-camera-submit").disabled = false;
+      getField("add-camera-submit").textContent = "Add Camera";
+      getField("add-camera-error").className = "alert";
+      getField("add-camera-error").textContent = "";
+      clearFilePick();
+      getField("fcam-enrollment-files").value = "";
+      getField("fcam-enrollment-summary").textContent = "No folder selected";
+      toggleVideoFileField();
+      toggleAnalysisFields();
+    }
+
+    function openEditCamera(camera) {
+      editingCamera = camera;
+      getField("add-camera-form").reset();
+      getField("camera-modal-title").textContent = "Edit Camera — " + camera.id;
+      getField("fcam-id").value = camera.id;
+      getField("fcam-id").disabled = true;
+      getField("fcam-name").value = camera.name || "";
+      getField("fcam-location").value = camera.location || "";
+      getField("fcam-zone").value = camera.zone || "";
+      getField("fcam-type").value = camera.type || "Fixed IP Camera";
+      getField("fcam-analysis-mode").value = camera.analysis_mode || "crowd";
+      getField("fcam-threshold").value = camera.threshold || "";
+      getField("add-camera-submit").textContent = "Save Changes";
+      getField("add-camera-submit").disabled = false;
+      getField("add-camera-error").className = "alert";
+      clearFilePick();
+      getField("fcam-enrollment-files").value = "";
+      getField("fcam-enrollment-summary").textContent = "Existing enrollment will be kept";
+      toggleVideoFileField();
+      toggleAnalysisFields();
+      getField("add-camera-modal").classList.add("show");
+    }
+
+    function closeAddCamera() {
+      getField("add-camera-modal").classList.remove("show");
+    }
+
+    async function submitAddCamera(event) {
+      event.preventDefault();
+      var id = getField("fcam-id").value.trim();
+      var name = getField("fcam-name").value.trim();
+      var location = getField("fcam-location").value.trim();
+      var zone = getField("fcam-zone").value.trim();
+      var type = getField("fcam-type").value;
+      var analysisMode = getField("fcam-analysis-mode").value;
+      var enrollmentFiles = getField("fcam-enrollment-files").files;
+      var threshold = parseInt(getField("fcam-threshold").value, 10);
+      var needsFaceEnrollment = analysisMode === "authentication" &&
+        (!editingCamera || editingCamera.analysis_mode !== "authentication");
+      var errorEl = getField("add-camera-error");
+      var submitButton = getField("add-camera-submit");
+
+      errorEl.className = "alert";
+
+      if (!id) { showAddError(errorEl, "Camera ID is required."); return false; }
+      if (!name) { showAddError(errorEl, "Camera name is required."); return false; }
+      if (!location) { showAddError(errorEl, "Location is required."); return false; }
+      if (!zone) { showAddError(errorEl, "Zone is required."); return false; }
+      if (analysisMode === "crowd" && (!threshold || isNaN(threshold) || threshold < 1)) { showAddError(errorEl, "Enter a valid crowd threshold."); return false; }
+      if (needsFaceEnrollment && !enrollmentFiles.length) { showAddError(errorEl, "Select a folder containing enrolled face images."); return false; }
+      if (!editingCamera && type === "Video File" && !pickedFile) { showAddError(errorEl, "Please attach a video file."); return false; }
+
+      if (type === "Web Cam") {
+        var denied = await confirmWebcamAccess();
+        if (denied) { showAddError(errorEl, denied); return false; }
+      }
+
+      var source = editingCamera ? editingCamera.source : "";
+      var resolution = pickedResolution || (editingCamera ? editingCamera.resolution : "");
+      if (type === "Video File" && pickedFile) {
+        source = pickedFile.name;
+        resolution = resolution || "1920 x 1080";
+      } else if (type === "Web Cam") {
+        source = "webcam://default";
+      } else {
+        source = "rtsp://" + (location.replace(/\s+/g, "") || "camera") + "/stream";
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = editingCamera ? "Saving…" : (analysisMode === "authentication" ? "Creating Camera…" : "Adding Camera…");
+      var payload = {
+        id: id, name: name, location: location, zone: zone,
+        type: type, source: source, resolution: resolution,
+        threshold: analysisMode === "crowd" ? threshold : 999999,
+        analysis_mode: analysisMode,
+      };
+      var result = editingCamera ? await API.updateCamera(editingCamera.id, payload) : await API.addCamera(payload);
+
+      if (result.ok) {
+        var registeredId = result.camera && result.camera.id ? result.camera.id : id;
+        // Start the source immediately. Face enrollment can take a moment,
+        // but the live feed must not wait for the naming cards to be saved.
+        if (!editingCamera && (type === "Video File" || type === "Web Cam")) {
+          handSourceToHost(registeredId, type, analysisMode);
+        }
+        if (needsFaceEnrollment) {
+          submitButton.textContent = "Detecting Faces…";
+          var candidateResult = await API.detectFaceCandidates(registeredId, enrollmentFiles);
+          if (!candidateResult.ok) {
+            showAddError(errorEl, candidateResult.message || "Camera was added, but no faces could be detected.");
+            submitButton.disabled = false;
+            submitButton.textContent = "Add Camera";
+            return false;
+          }
+          // Keep the edit form open behind the naming cards. Switching modes
+          // is not complete until the detected faces have been reviewed.
+          showFaceCandidates(registeredId, candidateResult.candidates || []);
+          await renderAll();
+          return false;
+        }
+        closeAddCamera();
+        clearFilePick();
+        getField("add-camera-form").reset();
+        await renderAll();
+      } else {
+        showAddError(errorEl, result.message || "Failed to add camera.");
+      }
+      submitButton.disabled = false;
+      submitButton.textContent = editingCamera ? "Save Changes" : "Add Camera";
+      return false;
+    }
+
+    function showFaceCandidates(cameraId, candidates) {
+      pendingFaceCameraId = cameraId;
+      var grid = getField("face-candidate-grid");
+      grid.innerHTML = "";
+      candidates.forEach(function (candidate, index) {
+        var card = document.createElement("div");
+        card.className = "face-candidate-card";
+        card.dataset.candidateId = candidate.id;
+        var image = document.createElement("img");
+        image.src = candidate.thumbnail;
+        image.alt = "Detected face " + (index + 1);
+        var title = document.createElement("strong");
+        title.textContent = "Detected face " + (index + 1);
+        var hint = document.createElement("span");
+        hint.className = "face-candidate-state";
+        hint.textContent = "Awaiting identity name";
+        var label = document.createElement("label");
+        label.textContent = "Person's name";
+        var input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "e.g. Priya Sharma";
+        input.autocomplete = "name";
+        input.setAttribute("aria-label", "Name for detected face " + (index + 1));
+        label.appendChild(input);
+        card.appendChild(image);
+        card.appendChild(title);
+        card.appendChild(hint);
+        card.appendChild(label);
+        grid.appendChild(card);
+      });
+      getField("face-candidate-error").className = "alert";
+      getField("face-candidate-modal").classList.add("show");
+    }
+
+    async function saveFaceCandidates() {
+      var entries = Array.from(getField("face-candidate-grid").querySelectorAll(".face-candidate-card")).map(function (card) {
+        return { id: card.dataset.candidateId, name: card.querySelector("input").value.trim() };
+      }).filter(function (entry) { return entry.name; });
+      var errorEl = getField("face-candidate-error");
+      if (!entries.length) {
+        errorEl.className = "alert alert-error show";
+        errorEl.textContent = "Name at least one detected face to continue.";
+        return;
+      }
+      var result = await API.confirmFaceCandidates(pendingFaceCameraId, entries);
+      if (!result.ok) {
+        errorEl.className = "alert alert-error show";
+        errorEl.textContent = result.message || "Could not save face names.";
+        return;
+      }
+      closeFaceCandidates();
+      closeAddCamera();
+      clearFilePick();
+      getField("add-camera-form").reset();
+      await renderAll();
+    }
+
+    function closeFaceCandidates() {
+      pendingFaceCameraId = null;
+      getField("face-candidate-modal").classList.remove("show");
+    }
+
+    function removeCamera(id) {
+      var cameras = window._currentCameras || [];
+      var cam = cameras.find(function (c) { return c.id === id; });
+      if (!cam) return;
+
+      getField("rm-cam-id").textContent = cam.id;
+      getField("rm-cam-name").textContent = cam.name || "Camera";
+      getField("rm-cam-location").textContent = camLocation(cam);
+      getField("rm-reverify").checked = false;
+      getField("rm-remove-btn").disabled = true;
+      getField("rm-error").className = "alert";
+      getField("rm-error").textContent = "";
+      getField("remove-camera-modal").classList.add("show");
+    }
+
+    async function confirmRemoveCamera() {
+      var rmEl = getField("rm-reverify");
+      var errorEl = getField("rm-error");
+
+      if (!rmEl.checked) {
+        errorEl.className = "alert alert-error show";
+        errorEl.textContent = 'Please tick "Reverify" to confirm removing this camera.';
+        return;
+      }
+
+      var cameraId = getField("rm-cam-id").textContent;
+      var result = await API.removeCamera(cameraId);
+
+      if (result.ok) {
+        // Only release the local capture once the camera is really gone.
+        tellHostToStop(cameraId);
+        closeRemoveCamera();
+        await renderAll();
+      } else {
+        errorEl.className = "alert alert-error show";
+        errorEl.textContent = result.message || "Failed to remove camera.";
+      }
+    }
+
+    function closeRemoveCamera() {
+      getField("remove-camera-modal").classList.remove("show");
+    }
+
+    function showAddError(el, message) {
+      el.className = "alert alert-error show";
+      el.textContent = message;
+    }
+
+    function refreshStats(cameras) {
+      var active = 0;
+      var danger = 0;
+      cameras.forEach(function (cam) {
+        var status = camStatus(cam);
+        if (status === "active") active++;
+        if (status === "danger") danger++;
+      });
+      getField("mgmt-total").textContent = cameras.length;
+      getField("mgmt-active").textContent = active;
+      getField("mgmt-danger").textContent = danger;
+    }
+
+    async function renderAll() {
+      var cameras = await API.getCameras();
+      window._currentCameras = cameras;
+      var grid = getField("mgmt-cards-grid");
+      grid.innerHTML = "";
+      grid.appendChild(buildAddCard());
+      cameras.forEach(function (cam) {
+        grid.appendChild(buildCard(cam));
+      });
+      refreshStats(cameras);
+    }
+
+    function buildCard(cam) {
+      var status = camStatus(cam);
+      var danger = status === "danger";
+      var online = status === "active";
+
+      var card = document.createElement("div");
+      card.className = "cam-card mgmt-card" + (danger ? " danger" : "");
+
+      var head = document.createElement("div");
+      head.className = "cam-card-head";
+      var icon = document.createElement("span");
+      icon.className = "mgmt-cam-icon";
+      icon.textContent = "📷";
+      var nameWrap = document.createElement("div");
+      nameWrap.className = "mgmt-cam-name-wrap";
+      var name = document.createElement("span");
+      name.className = "cam-card-name";
+      name.textContent = camLocation(cam);
+      nameWrap.appendChild(name);
+      var id = document.createElement("span");
+      id.className = "cam-card-id";
+      id.textContent = cam.id;
+      var st = document.createElement("span");
+      st.className = "cam-card-status " + (danger ? "status-danger" : (online ? "status-ok" : "status-danger"));
+      st.textContent = danger ? "● Danger" : (online ? "● Active" : "● Offline");
+      var rm = document.createElement("button");
+      rm.className = "mgmt-remove-btn";
+      rm.title = "Remove " + cam.id;
+      rm.textContent = "🗑";
+      rm.onclick = function (e) {
+        e.stopPropagation();
+        removeCamera(cam.id);
+      };
+      var edit = document.createElement("button");
+      edit.className = "mgmt-edit-btn";
+      edit.title = "Edit " + cam.id;
+      edit.textContent = "Edit";
+      edit.onclick = function (e) {
+        e.stopPropagation();
+        openEditCamera(cam);
+      };
+
+      head.appendChild(icon);
+      head.appendChild(nameWrap);
+      head.appendChild(id);
+      head.appendChild(st);
+      head.appendChild(edit);
+      head.appendChild(rm);
+
+      var body = document.createElement("div");
+      body.className = "mgmt-card-meta";
+
+      var rows = [
+        ["Camera", cam.name || cam.id],
+        ["Location", camLocation(cam)],
+        ["Type", cam.type || "Fixed IP Camera"],
+      ];
+      if (cam.source) rows.push(["Source", cam.source]);
+      rows.push(
+        ["Resolution", cam.resolution || "1920 × 1080"],
+        ["Threshold", cam.threshold != null ? cam.threshold + " people" : "—"],
+        ["Zone", cam.zone || "General"]
+      );
+
+      rows.forEach(function (r) {
+        var row = document.createElement("div");
+        row.className = "mgmt-meta-row";
+        var label = document.createElement("span");
+        label.className = "mgmt-meta-label";
+        label.textContent = r[0];
+        var value = document.createElement("span");
+        value.className = "mgmt-meta-value";
+        value.textContent = r[1];
+        row.appendChild(label);
+        row.appendChild(value);
+        body.appendChild(row);
+      });
+
+      card.appendChild(head);
+      card.appendChild(body);
+      return card;
+    }
+
+    (async () => {
+      const user = await Auth.currentUser();
+      if (!user) {
+        window.location.href = "{% url 'DatabaseConectivity:login' %}";
+        return;
+      }
+
+      await renderAll();
+    })();
+  </script>
+</body>
+</html>
