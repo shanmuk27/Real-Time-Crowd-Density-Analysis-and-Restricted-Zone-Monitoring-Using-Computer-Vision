@@ -76,7 +76,7 @@
     </div>
   </div>
 
-<script src="{% static 'js/capture.js' %}?v=4"></script>
+<script src="{% static 'js/capture.js' %}?v=5"></script>
 <script src="{% static 'js/api.js' %}?v=3"></script>
   <script src="{% static 'js/auth.js' %}"></script>
   <script>
@@ -126,6 +126,9 @@
       var list = document.getElementById("notif-list");
       list.innerHTML = "";
       var notifications = await API.getNotifications();
+      var unread = notifications.filter(function (n) { return n.unread; }).length;
+      document.getElementById("notif-badge").textContent = unread;
+      document.getElementById("notif-badge").style.display = unread ? "" : "none";
       if (!notifications.length) {
         list.innerHTML = '<div class="notif-item"><span class="notif-item-text">No notifications</span></div>';
         return;
@@ -144,6 +147,7 @@
     }
 
     renderNotifications();
+    setInterval(renderNotifications, 15000);
 
     (async () => {
       const user = await Auth.currentUser();

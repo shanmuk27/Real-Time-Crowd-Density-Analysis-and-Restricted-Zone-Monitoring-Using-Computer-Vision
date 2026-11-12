@@ -32,6 +32,21 @@ const Auth = {
     return res.users || [];
   },
 
+  async uploadPhoto(file) {
+    const form = new FormData();
+    form.append("photo", file);
+    const res = await fetch("/profile/photo/", {
+      method: "POST",
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+      body: form,
+    });
+    return res.json();
+  },
+
+  async updateProfile({ name, email }) {
+    return this.request("/profile/edit/", { name, email });
+  },
+
   async request(path, data) {
     try {
       const res = await fetch(path, {

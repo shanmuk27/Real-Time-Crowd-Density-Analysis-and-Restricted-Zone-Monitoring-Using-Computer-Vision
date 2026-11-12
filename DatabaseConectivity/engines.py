@@ -22,6 +22,8 @@ from django.conf import settings
 class VisionEngines:
     def __init__(self) -> None:
         self._lock = Lock()
+        self._crowd_lock = Lock()
+        self._face_lock = Lock()
         self._crowd_model = None
         self._crowd_class_ids: list[int] = []
         self._face_detector = None
@@ -176,7 +178,7 @@ class VisionEngines:
 
     def enroll_face(self, image_bytes: bytes) -> list[float]:
         """Create a normalized ArcFace embedding without retaining the photo."""
-        with self._lock:
+        with self._face_lock:
             self._load_face()
             if self._face_verifier is None:
                 raise RuntimeError(self._states["face"]["message"])
@@ -190,7 +192,7 @@ class VisionEngines:
 
     def extract_face_candidates(self, image_bytes: bytes) -> list[tuple[list[float], bytes]]:
         """Detect usable faces and return embeddings plus small display crops."""
-        with self._lock:
+        with self._face_lock:
             self._load_face()
             if self._face_detector is None or self._face_verifier is None:
                 raise RuntimeError(self._states["face"]["message"])
@@ -228,23 +230,24 @@ class VisionEngines:
         A non-blocking lock avoids building an inference queue when cameras
         submit frames faster than either model can process them.
         """
-        if not self._lock.acquire(blocking=False):
+        work_lock = self._face_lock if analysis_mode == "authentication" else self._crowd_lock
+        if not work_lock.acquire(blocking=False):
             return image_bytes, None, self.status(), []
         try:
+            if analysis_mode == "authentication" and camera_id:
+                now = time.monotonic()
+                last = self._last_face_analysis_at.get(camera_id, 0.0)
+                if now - last < settings.FACE_AUTH_FRAME_INTERVAL_SECONDS:
+                    # Reject early: decoding JPEGs and enhancing frames that
+                    # will not be analysed wastes CPU on integrated graphics.
+                    return image_bytes, None, self.status(), []
+                self._last_face_analysis_at[camera_id] = now
             raw = np.frombuffer(image_bytes, dtype=np.uint8)
             frame = cv2.imdecode(raw, cv2.IMREAD_COLOR)
             if frame is None:
                 return image_bytes, None, self.status(), []
             frame, _denoised = self.clean_video_noise(frame)
             frame, _enhanced = self.enhance_frame_clarity(frame)
-            if analysis_mode == "authentication" and camera_id:
-                now = time.monotonic()
-                last = self._last_face_analysis_at.get(camera_id, 0.0)
-                if now - last < settings.FACE_AUTH_FRAME_INTERVAL_SECONDS:
-                    # Keep the video smooth: recognition is deliberately
-                    # sampled while the browser continues relaying live video.
-                    return image_bytes, None, self.status(), []
-                self._last_face_analysis_at[camera_id] = now
             if analysis_mode == "crowd":
                 self._load_crowd()
             elif analysis_mode == "authentication":
@@ -286,7 +289,22 @@ class VisionEngines:
                     name: self._face_verifier.normalize(np.mean(vectors, axis=0))
                     for name, vectors in grouped_embeddings.items()
                 }
-                if self._face_verifier.prototypes:
+                labels = [("UNKNOWN", 0.0, False) for _ in face_boxes]
+                qualified_indexes = []
+                qualified_boxes = []
+                for index, box in enumerate(face_boxes):
+                    crop = self._face_verifier.crop_face(frame, box)
+                    if crop.size == 0 or min(crop.shape[:2]) < settings.FACE_AUTH_MIN_FACE_SIZE:
+                        continue
+                    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+                    brightness = float(gray.mean())
+                    blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+                    if not (settings.FACE_AUTH_MIN_BRIGHTNESS <= brightness <= settings.FACE_AUTH_MAX_BRIGHTNESS) or \
+                            blur_score < settings.FACE_AUTH_MIN_BLUR_SCORE:
+                        continue
+                    qualified_indexes.append(index)
+                    qualified_boxes.append(box)
+                if self._face_verifier.prototypes and qualified_boxes:
                     label_cache = self._face_label_caches.setdefault(
                         camera_id or "default",
                         self._face_label_cache_class(
@@ -294,9 +312,9 @@ class VisionEngines:
                             settings.FACE_AUTH_MAX_VERIFY_FACES,
                         ),
                     )
-                    labels, _, _ = label_cache.label(frame, face_boxes, self._face_verifier)
-                else:
-                    labels = [("UNKNOWN", 0.0, False) for _ in face_boxes]
+                    qualified_labels, _, _ = label_cache.label(frame, qualified_boxes, self._face_verifier)
+                    for index, label in zip(qualified_indexes, qualified_labels):
+                        labels[index] = label
                 for box, confidence, (name, score, verified) in zip(face_boxes, face_scores, labels):
                     face_frame = None
                     face_quality = 0.0
@@ -344,7 +362,7 @@ class VisionEngines:
             self._states["crowd"].update(message=f"Inference error: {error}")
             return image_bytes, None, self.status(), []
         finally:
-            self._lock.release()
+            work_lock.release()
 
 
 engines = VisionEngines()

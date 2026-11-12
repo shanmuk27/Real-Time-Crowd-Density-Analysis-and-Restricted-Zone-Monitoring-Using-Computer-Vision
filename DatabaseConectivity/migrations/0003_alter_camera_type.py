@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('DatabaseConectivity', '0002_restore_core_models'),
+        ('DatabaseConectivity', '0001_initial'),
     ]
 
     operations = [

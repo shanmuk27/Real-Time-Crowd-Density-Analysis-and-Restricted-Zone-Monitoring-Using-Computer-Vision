@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign In | CloudCount Dashboard</title>
+  <title>Sign In | CrowdCount Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -16,7 +16,7 @@
       <aside class="auth-brand show">
         <div class="brand-logo">
           <span class="logo-mark">☁️</span>
-          <span>CloudCount</span>
+          <span>CrowdCount</span>
         </div>
         <div class="brand-copy">
           <h2>Monitor your cloud infrastructure in real time.</h2>
@@ -35,7 +35,7 @@
       <section class="auth-card">
         <div class="mobile-logo">
           <span class="logo-mark">☁️</span>
-          <span>CloudCount</span>
+          <span>CrowdCount</span>
         </div>
 
         <div class="auth-heading">
@@ -99,7 +99,7 @@
   <script>
     Auth.currentUser().then((user) => {
       if (user) {
-        window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
+        window.location.href = "{% url 'DatabaseConectivity:app' %}";
       }
     });
 
@@ -139,7 +139,7 @@
       if (result.ok) {
         showAlert("login-alert", "Signed in successfully. Redirecting...", "success");
         setTimeout(() => {
-          window.location.href = "{% url 'DatabaseConectivity:dashboard' %}";
+          window.location.href = "{% url 'DatabaseConectivity:app' %}";
         }, 700);
       } else {
         showAlert("login-alert", result.message, "error");

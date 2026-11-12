@@ -39,6 +39,13 @@ def _require_login(request):
     return Users.objects.filter(id=user_id).first()
 
 
+def _notify(icon, message, cooldown_seconds=300):
+    """Create real operational alerts without repeating every video frame."""
+    since = timezone.now() - timedelta(seconds=cooldown_seconds)
+    if not Notification.objects.filter(message=message, created_at__gte=since).exists():
+        Notification.objects.create(icon=icon, message=message)
+
+
 @ensure_csrf_cookie
 def Home(request):
     user_id = request.session.get('user_id')
@@ -61,6 +68,8 @@ def Login(request):
         request.session.flush()
         request.session['user_id'] = user.id
         request.session['role'] = user.role
+        if user.role.strip().lower() == 'admin':
+            _notify('🔐', f'Administrator {user.name} signed in', cooldown_seconds=60)
         return JsonResponse({'ok': True, 'user': _user_dict(user)})
     return render(request, 'login.html')
 
@@ -340,7 +349,7 @@ def ApiCameraFrame(request, camera_id):
                         # crop. A clear face frame is required for review.
                         if not verified and not best_face.get('face_frame'):
                             continue
-                        person, _ = CameraPerson.objects.get_or_create(
+                        person, created = CameraPerson.objects.get_or_create(
                             camera=current_camera, name=name, verified=verified,
                             defaults={'zone': current_camera.zone, 'current_count': seen_count},
                         )
@@ -352,6 +361,8 @@ def ApiCameraFrame(request, camera_id):
                             person.face_quality = best_face['face_quality']
                             update_fields.extend(['face_frame', 'face_quality'])
                         person.save(update_fields=update_fields)
+                        if created and not verified:
+                            _notify('⚠️', f'Unverified face detected at {current_camera.zone} ({current_camera.camera_id})')
             if crowd_count is None:
                 return
             current_camera = Camera.objects.filter(camera_id=camera_id).first()
@@ -363,6 +374,8 @@ def ApiCameraFrame(request, camera_id):
             if current_camera.status != next_status:
                 current_camera.status = next_status
                 current_camera.save(update_fields=['status', 'updated_at'])
+                if next_status == 'danger':
+                    _notify('⚠️', f'High crowd density at {current_camera.zone} ({current_camera.camera_id}): {crowd_count} people')
 
         engines.submit(camera_id, frame, camera.analysis_mode, enrollments, publish_engine_result)
         return JsonResponse({'ok': True, 'seq': seq, 'processing': True, 'engines': engines.status()})
@@ -702,7 +715,9 @@ def ApiRemoveUnverifiedPerson(request, person_id):
 
 
 def ApiNotifications(request):
-    notifs = list(Notification.objects.all().values('icon', 'message', 'unread', 'created_at'))
+    if not _require_login(request):
+        return JsonResponse({'ok': False, 'message': 'Not authenticated.'}, status=403)
+    notifs = list(Notification.objects.all()[:20].values('icon', 'message', 'unread', 'created_at'))
     result = []
     for n in notifs:
         result.append({

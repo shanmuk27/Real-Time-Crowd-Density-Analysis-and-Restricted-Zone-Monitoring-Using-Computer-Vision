@@ -161,9 +161,15 @@ VISION_SHADOW_LIFT_GAMMA = float(os.environ.get('VISION_SHADOW_LIFT_GAMMA', '0.7
 # ``auto`` selects CUDA when it is available and otherwise uses the CPU.
 VISION_ENGINE_DEVICE = os.environ.get('VISION_ENGINE_DEVICE', 'auto')
 FACE_AUTH_IMAGE_SIZE = int(os.environ.get('FACE_AUTH_IMAGE_SIZE', '512'))
-FACE_AUTH_FRAME_INTERVAL_SECONDS = float(os.environ.get('FACE_AUTH_FRAME_INTERVAL_SECONDS', '1.0'))
+# Authentication is sampled rather than inferred on every video frame. This
+# keeps the CPU-only face detector responsive while label caching preserves a
+# stable live result between samples.
+FACE_AUTH_FRAME_INTERVAL_SECONDS = float(os.environ.get('FACE_AUTH_FRAME_INTERVAL_SECONDS', '1.25'))
 FACE_AUTH_VERIFY_CACHE_SECONDS = float(os.environ.get('FACE_AUTH_VERIFY_CACHE_SECONDS', '5.0'))
 FACE_AUTH_MAX_VERIFY_FACES = int(os.environ.get('FACE_AUTH_MAX_VERIFY_FACES', '4'))
 FACE_AUTH_MIN_FACE_SIZE = int(os.environ.get('FACE_AUTH_MIN_FACE_SIZE', '64'))
+FACE_AUTH_MIN_BRIGHTNESS = float(os.environ.get('FACE_AUTH_MIN_BRIGHTNESS', '35'))
+FACE_AUTH_MAX_BRIGHTNESS = float(os.environ.get('FACE_AUTH_MAX_BRIGHTNESS', '220'))
+FACE_AUTH_MIN_BLUR_SCORE = float(os.environ.get('FACE_AUTH_MIN_BLUR_SCORE', '45'))
 # Small detector + MobileFaceNet recognition, suitable for CPU live feeds.
 FACE_RECOGNITION_MODEL = os.environ.get('FACE_RECOGNITION_MODEL', 'buffalo_sc')

@@ -11,6 +11,7 @@
 const Capture = (function () {
   var FPS = 5;
   var FRAME_INTERVAL_MS = Math.round(1000 / FPS);
+  var AUTH_FRAME_INTERVAL_MS = 500;
   var FACE_MAX_EDGE = 640;
   var CROWD_MAX_EDGE = 1024;
 
@@ -62,6 +63,7 @@ const Capture = (function () {
 
   function startPump(entry) {
     stopPump(entry);
+    var interval = entry.analysisMode === "authentication" ? AUTH_FRAME_INTERVAL_MS : FRAME_INTERVAL_MS;
     entry.timer = window.setInterval(function () {
       // A webcam track can end on its own (device unplugged, permission
       // revoked). Stopping here lets the feed fall through to offline.
@@ -73,7 +75,7 @@ const Capture = (function () {
         }
       }
       captureFrame(entry);
-    }, FRAME_INTERVAL_MS);
+    }, interval);
   }
 
   function stopPump(entry) {
