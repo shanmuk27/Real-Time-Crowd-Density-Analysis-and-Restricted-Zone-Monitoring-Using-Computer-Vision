@@ -1,0 +1,2 @@
+runs/crowd_train/weights/*.pt filter=lfs diff=lfs merge=lfs -text
+runs/face_detection/face_yolo6n/weights/*.pt filter=lfs diff=lfs merge=lfs -text
